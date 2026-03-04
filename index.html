@@ -14,7 +14,7 @@
     nav a{ color:var(--muted); text-decoration:none; margin-right:10px; font-size:14px; }
     nav a:hover{ color:var(--txt); }
     .pill{ padding:6px 10px; border:1px solid var(--line); border-radius:999px; font-size:12px; color:var(--muted); }
-    .grid{ display:grid; grid-template-columns: 340px 1fr; gap:16px; }
+    .grid{ display:grid; grid-template-columns: 360px 1fr; gap:16px; }
     @media(max-width:980px){ .grid{ grid-template-columns:1fr; } }
     .card{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; }
     h1{ font-size:22px; margin:8px 0 4px; }
@@ -26,6 +26,7 @@
     .btnAcc{ background:rgba(34,197,94,.14); border:1px solid rgba(34,197,94,.35); }
     .btnWarn{ background:rgba(245,158,11,.14); border:1px solid rgba(245,158,11,.35); }
     .btnBad{ background:rgba(251,113,133,.14); border:1px solid rgba(251,113,133,.35); }
+    .btn:disabled{ opacity:.55; cursor:not-allowed; }
     input{ width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:#0e1628; color:var(--txt); }
     label{ font-size:12px; color:var(--muted); display:block; margin:10px 0 6px; }
     .small{ font-size:12px; color:var(--muted); }
@@ -55,6 +56,9 @@
     details{ border:1px solid var(--line); border-radius:12px; background:#0e1628; padding:10px; }
     details summary{ cursor:pointer; color:#cbd5e1; font-weight:700; }
     .failItem{ border:1px solid var(--line); border-radius:12px; padding:10px; margin-top:10px; background:#0b1220; }
+    .toast{ margin-top:10px; padding:10px; border-radius:12px; border:1px solid var(--line); background:#0e1628; }
+    .toast.ok{ border-color:rgba(34,197,94,.35); }
+    .toast.bad{ border-color:rgba(251,113,133,.35); }
   </style>
 </head>
 <body>
@@ -76,10 +80,16 @@
 
 <div class="wrap" id="inicio">
   <div class="card">
-    <h1>Tu primera app RAP desde 0 (modo “restaurante” 🍽️)</h1>
+    <h1>Tu primera app RAP desde 0 (analogía del restaurante 🍽️)</h1>
     <p>
-      Flujo mental: <b>datos → comportamiento → servicio → UI</b>.
-      Avance por checklist + quiz (<b>aprobado = 100%</b>).
+      Piensa RAP como un restaurante:
+      <b>CDS</b> son los ingredientes (modelo/metadata),
+      <b>Behavior</b> es la receta (reglas, acciones, validaciones),
+      <b>Implementación</b> es el chef (lógica ABAP),
+      <b>Service</b> es el mesero (OData),
+      <b>Fiori Elements</b> es el menú (UI generada).
+      <br/>
+      El objetivo del curso: guiarte para levantar tu <b>primera app RAP</b> completa.
     </p>
     <div class="row">
       <span class="tag">Checklist por módulo</span>
@@ -91,10 +101,13 @@
   <div class="grid" style="margin-top:16px;">
     <div class="card">
       <h2>Registro / Acceso</h2>
-      <p class="small">Primero inicia sesión. Luego se habilitan módulos (RLS: solo autenticados).</p>
+      <p class="small">
+        Nota: el <b>profile</b> se crea automáticamente por trigger en Supabase al registrarse.
+        Si algo falla, aquí te lo mostramos (sin silencios).
+      </p>
 
       <div id="authBox">
-        <label>Nombre completo</label>
+        <label>Nombre completo (para el instructor)</label>
         <input id="fullName" placeholder="Ej: Edgar Tovar" />
 
         <label>Cohorte (opcional)</label>
@@ -113,7 +126,7 @@
           <button class="btn" id="btnSignIn">Iniciar sesión</button>
         </div>
 
-        <p class="small" id="authMsg"></p>
+        <div id="authMsgBox" class="toast hide"></div>
       </div>
 
       <div id="userBox" class="hide">
@@ -123,6 +136,7 @@
           <button class="btn btnWarn" id="btnSignOut">Cerrar sesión</button>
           <button class="btn btnBad" id="btnResetAll">Reiniciar TODO</button>
         </div>
+        <div id="userMsgBox" class="toast hide"></div>
       </div>
 
       <div class="hr"></div>
@@ -137,6 +151,15 @@
       <h2>Ruta</h2>
       <p class="small" id="routeHint">Inicia sesión para ver los módulos.</p>
       <div class="list" id="modulesList"></div>
+
+      <div class="hr"></div>
+      <details>
+        <summary>¿Qué vas a construir al final?</summary>
+        <p class="small">
+          Una app simple de “Tareas”:
+          crear/editar, validaciones (título obligatorio), publicar OData y verla en UI (Fiori Elements).
+        </p>
+      </details>
     </div>
   </div>
 </div>
@@ -177,7 +200,7 @@
 
   <div class="card hide" style="margin-top:16px;" id="instructor">
     <h2>Panel del Instructor</h2>
-    <p class="small">Avance por estudiante + detalle de fallos.</p>
+    <p class="small">Avance por estudiante + detalle de fallos (pregunta, respondió, correcta).</p>
     <div class="hr"></div>
     <table>
       <thead>
@@ -198,18 +221,17 @@
 <script type="module">
   import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
-  // ✅ Tus credenciales
+  // ✅ Tus credenciales (tal cual)
   const SUPABASE_URL = "https://zuwtnkfxxbidtzsmoexy.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1d3Rua2Z4eGJpZHR6c21vZXh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2NDAzOTUsImV4cCI6MjA4ODIxNjM5NX0.KX18kWCxdLl44e6A-ZUenU5IFuFiHXk38sq_W_-V_rA";
 
-  // Extra robustez: persist session + auto refresh
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: { persistSession: true, autoRefreshToken: true }
   });
 
   const el = (id) => document.getElementById(id);
 
-  // UI refs
+  // UI
   const sessionPill = el("sessionPill");
   const rolePill = el("rolePill");
   const navInstructor = el("navInstructor");
@@ -217,7 +239,9 @@
 
   const authBox = el("authBox");
   const userBox = el("userBox");
-  const authMsg = el("authMsg");
+
+  const authMsgBox = el("authMsgBox");
+  const userMsgBox = el("userMsgBox");
 
   const fullName = el("fullName");
   const cohort = el("cohort");
@@ -229,6 +253,7 @@
 
   const routeHint = el("routeHint");
   const modulesList = el("modulesList");
+
   const progressBar = el("progressBar");
   const progressTxt = el("progressTxt");
 
@@ -254,34 +279,75 @@
 
   let modules = [];
   let progressMap = new Map(); // module_code -> completed bool
-  let quizQuestionsByModule = new Map(); // module_code -> [{id,...}]
+  let quizQuestionsByModule = new Map(); // module_code -> questions
   let myAttempts = new Map(); // module_code -> attempt
 
   let selectedModule = null;
   let selectedAnswers = {}; // {question_id:"A"|"B"|"C"}
 
-  // Content (ligero)
+  // --- Content (con analogía restaurante) ---
   const CONTENT = {
-    M01: { explain: "RAP es un restaurante: ingredientes (CDS), receta (Behavior), chef (ABAP), mesero (OData), menú (Fiori Elements).", exercise: "Ejercicio: mapea tu caso real:\n- Ingredientes: datos\n- Receta: CRUD/acciones\n- Chef: validaciones\n- Mesero: OData\n- Menú: Fiori Elements" },
-    M02: { explain: "CDS define el contrato de datos que consume servicio/UI.", exercise: "Define entidad Tarea: UUID, Title, Status, CreatedBy, CreatedAt.\n¿Cuáles se llenan solos?" },
-    M03: { explain: "Behavior es la receta: CRUD, validaciones, acciones, locks.", exercise: "Reglas:\n1) Title obligatorio\n2) Status solo OPEN/DONE" },
-    M04: { explain: "Implementación es el chef: lógicas ABAP (validations/determinations).", exercise: "Implementa mentalmente:\n- default Status = OPEN\n- validate Title no vacío" },
-    M05: { explain: "Service Definition + Binding publica tu modelo como OData.", exercise: "Checklist:\n- Service Definition expone entidad\n- Binding OData publicado" },
-    M06: { explain: "Fiori Elements genera UI desde metadata/annotations.", exercise: "Prueba: crear 3 tareas y editar status." },
-    M07: { explain: "Mensajes claros = control de calidad.", exercise: "Escribe 2 mensajes de validación claros." },
-    M08: { explain: "End-to-end mínimo: CDS + Behavior + Service + UI + validaciones.", exercise: "Checklist final: CRUD + servicio + UI + validaciones." }
+    M01: {
+      explain: "Vista general: RAP es un restaurante. Si entiendes el flujo, el resto cae en su lugar.",
+      exercise: "Mapea tu app RAP como restaurante:\n- CDS = ingredientes (campos/entidades)\n- Behavior = receta (CRUD, acciones, validaciones)\n- Implementación = chef (lógica ABAP)\n- Service = mesero (OData)\n- Fiori Elements = menú (UI generada)\n\n✅ Objetivo: terminar con una app de Tareas."
+    },
+    M02: {
+      explain: "CDS define el contrato de datos (lo que el ‘menú’ puede mostrar). Si tu CDS está bien, la UI sale casi sola.",
+      exercise: "Ejercicio (mental): define entidad Tarea:\n- ID (UUID)\n- Title (texto)\n- Status (OPEN/DONE)\n- CreatedAt, CreatedBy\n\nPregunta: ¿cuáles campos deberían ser 'solo lectura' en la UI?"
+    },
+    M03: {
+      explain: "Behavior es la receta: qué se puede hacer y bajo qué reglas. Aquí vive el 'control de calidad'.",
+      exercise: "Reglas sugeridas:\n1) Title obligatorio (no vacío)\n2) Status solo OPEN o DONE\n3) Acción: MarkDone\n\nDescribe cómo la receta evita errores."
+    },
+    M04: {
+      explain: "La implementación es el chef: determinations (defaults) y validations (reglas) con ABAP.",
+      exercise: "Ejercicio:\n- Determination: si Status vacío → OPEN\n- Validation: si Title vacío → error con mensaje claro\n\nEscribe 2 mensajes ‘humanos’ para el usuario."
+    },
+    M05: {
+      explain: "Service Definition + Binding: el mesero publica tu menú para que otros lo consuman (OData).",
+      exercise: "Checklist:\n- Service Definition expone la entidad\n- Service Binding OData activo/publicado\n- Probar GET en el endpoint\n\nTip: si el mesero no sale, nadie ve tu menú."
+    },
+    M06: {
+      explain: "Fiori Elements: el menú se genera desde metadata. Tu trabajo es describir bien los datos (CDS + annotations).",
+      exercise: "Prueba rápida:\n- Crear 3 tareas\n- Editar una\n- Marcar DONE\n\n✅ Si funciona, tu restaurante está abierto."
+    },
+    M07: {
+      explain: "Mensajes y errores: sin mensajes claros, el usuario se frustra. Aquí pules la experiencia.",
+      exercise: "Ejercicio:\n- 1 mensaje para Title vacío\n- 1 mensaje para Status inválido\n\nHazlos cortos y accionables."
+    },
+    M08: {
+      explain: "Cierre: armamos el flujo end-to-end mínimo (datos → comportamiento → servicio → UI).",
+      exercise: "Checklist final:\n- CDS listo\n- Behavior listo\n- Validations + Determinations\n- Service publicado\n- UI operativa\n\n✅ Meta: tu primera app RAP funcional."
+    }
   };
 
   // Utils
   const pct = (n, d) => (d === 0 ? 0 : Math.round((n / d) * 100));
 
- function setMsg(txt, isError=false){
-  authMsg.textContent = txt || "";
-  authMsg.style.color = isError ? "#fca5a5" : "#a7f3d0";
-  if(isError && txt) alert(txt); // <- para que NUNCA pase desapercibido
-}
-  function setQuizMsg(txt, tone="muted"){
-    quizMsg.textContent = txt || "";
+  function showBox(boxEl, msg, tone="ok"){
+    if(!msg){
+      boxEl.classList.add("hide");
+      boxEl.textContent = "";
+      return;
+    }
+    boxEl.classList.remove("hide");
+    boxEl.classList.toggle("ok", tone === "ok");
+    boxEl.classList.toggle("bad", tone === "bad");
+    boxEl.textContent = msg;
+    // Para que NUNCA sea silencioso cuando es error
+    if(tone === "bad") alert(msg);
+  }
+
+  function setAuthMsg(msg, isError=false){
+    console[isError ? "error" : "log"](msg);
+    showBox(authMsgBox, msg, isError ? "bad" : "ok");
+  }
+  function setUserMsg(msg, isError=false){
+    console[isError ? "error" : "log"](msg);
+    showBox(userMsgBox, msg, isError ? "bad" : "ok");
+  }
+  function setQuizMsg(msg, tone="muted"){
+    quizMsg.textContent = msg || "";
     quizMsg.style.color =
       tone === "ok" ? "#86efac" :
       tone === "bad" ? "#fecdd3" :
@@ -295,15 +361,10 @@
     return progressMap.get(moduleCode) === true;
   }
 
-  function calcChecklistPct(){
-    return pct(modules.filter(m => moduleChecklistDone(m.code)).length, modules.length);
-  }
-  function calcQuizPct(){
-    return pct(modules.filter(m => isQuizPassed(m.code)).length, modules.length);
-  }
-  function calcTotalPct(){
-    return Math.round(calcChecklistPct() * 0.5 + calcQuizPct() * 0.5);
-  }
+  function calcChecklistPct(){ return pct(modules.filter(m => moduleChecklistDone(m.code)).length, modules.length); }
+  function calcQuizPct(){ return pct(modules.filter(m => isQuizPassed(m.code)).length, modules.length); }
+  function calcTotalPct(){ return Math.round(calcChecklistPct() * 0.5 + calcQuizPct() * 0.5); }
+
   function renderTotalProgress(){
     const total = calcTotalPct();
     progressBar.style.width = total + "%";
@@ -355,17 +416,7 @@
     routeHint.textContent = logged ? "Selecciona un módulo." : "Inicia sesión para ver los módulos.";
   }
 
-  async function upsertProfile(userId, full_name, cohortTxt){
-    const { error } = await supabase.from("profiles").upsert({
-      id: userId,
-      full_name,
-      cohort: cohortTxt || null,
-      role: "student"
-    });
-    if(error) throw error;
-  }
-
-  // Data loaders (solo cuando hay sesión)
+  // Data loaders (solo con sesión)
   async function loadModules(){
     const { data, error } = await supabase.from("modules").select("*").order("order_no", { ascending: true });
     if(error) throw error;
@@ -389,7 +440,6 @@
   }
 
   async function loadMyProfile(){
-    if(!currentUser) return null;
     const { data, error } = await supabase.from("profiles").select("*").eq("id", currentUser.id).maybeSingle();
     if(error) throw error;
     return data;
@@ -413,7 +463,6 @@
   }
 
   async function toggleChecklist(moduleCode){
-    if(!currentUser) return alert("Inicia sesión para guardar avance.");
     const newVal = !moduleChecklistDone(moduleCode);
     progressMap.set(moduleCode, newVal);
 
@@ -425,7 +474,7 @@
     });
     if(error){
       progressMap.set(moduleCode, !newVal);
-      alert("No se pudo guardar checklist: " + error.message);
+      setUserMsg("No se pudo guardar checklist: " + error.message, true);
       return;
     }
     renderModules();
@@ -469,15 +518,13 @@
     });
 
     quizBox.querySelectorAll(".optBtn").forEach(btn => {
-      const qid = btn.getAttribute("data-qid");
+      const qid = String(btn.getAttribute("data-qid"));
       const opt = btn.getAttribute("data-opt");
       if(selectedAnswers?.[qid] === opt) btn.classList.add("sel");
 
       btn.addEventListener("click", () => {
-        const qid2 = btn.getAttribute("data-qid");
-        const opt2 = btn.getAttribute("data-opt");
-        selectedAnswers[qid2] = opt2;
-        quizBox.querySelectorAll(`.optBtn[data-qid="${qid2}"]`).forEach(b => b.classList.remove("sel"));
+        selectedAnswers[qid] = opt;
+        quizBox.querySelectorAll(`.optBtn[data-qid="${qid}"]`).forEach(b => b.classList.remove("sel"));
         btn.classList.add("sel");
       });
     });
@@ -487,10 +534,8 @@
     }
   }
 
-  // ✅ Aprobado = 100% (score === total)
+  // Aprobado = 100%
   async function submitQuiz(moduleCode){
-    if(!currentUser) return alert("Inicia sesión para calificar el quiz.");
-
     const qs = quizQuestionsByModule.get(moduleCode) || [];
     const total = qs.length;
 
@@ -501,7 +546,6 @@
       }
     }
 
-    // Simple: traemos correct_opt para calificar
     const { data: keys, error } = await supabase
       .from("quiz_questions")
       .select("id, correct_opt")
@@ -540,7 +584,6 @@
     myAttempts.set(moduleCode, payload);
     renderModules();
     renderDetailStatus(moduleCode);
-
     setQuizMsg(`Resultado: ${score}/${total} (${passed ? "APROBADO ✅" : "Aún no 😅"})`, passed ? "ok" : "warn");
 
     if(currentProfile?.role === "instructor"){
@@ -567,7 +610,7 @@
     location.hash = "#detalle";
   }
 
-  // ------- Instructor: fallos -------
+  // ------- Instructor (con fallos) -------
   function optLabel(opt){ return opt ? opt.toUpperCase() : "(sin responder)"; }
 
   async function buildFailureReportForUser(userId){
@@ -718,168 +761,14 @@
     }
   }
 
-  // ---- Auth handlers (CORREGIDOS) ----
-function hardMsg(txt, isError=false){
-  setMsg(txt, isError);
-  // Esto te asegura que aunque no veas el texto, te enteras
-  console[isError ? "error" : "log"](txt);
-}
-
-el("btnSignUp").addEventListener("click", async () => {
-  const btn = el("btnSignUp");
-  btn.disabled = true;
-  try{
-    hardMsg("Creando cuenta...", false);
-
-    const nm = fullName.value.trim();
-    const ch = cohort.value.trim();
-    const em = email.value.trim();
-    const pw = password.value.trim();
-
-    if(!nm){ hardMsg("Escribe tu nombre completo.", true); return; }
-    if(!em || !pw){ hardMsg("Email y contraseña son obligatorios.", true); return; }
-
-    // 1) Sign up
-    const r1 = await supabase.auth.signUp({ email: em, password: pw });
-    if(r1.error){
-      hardMsg("No se pudo crear cuenta: " + r1.error.message, true);
-      return;
-    }
-
-    // 2) Forzar login para garantizar sesión
-    hardMsg("Cuenta creada. Iniciando sesión...", false);
-    const r2 = await supabase.auth.signInWithPassword({ email: em, password: pw });
-    if(r2.error){
-      hardMsg("Cuenta creada, pero login falló: " + r2.error.message, true);
-      return;
-    }
-
-    // 3) Crear profile (aquí suele fallar por RLS)
-    hardMsg("Creando perfil en BD (profiles)...", false);
-    const userId = r2.data.user.id;
-
-    const r3 = await supabase.from("profiles").upsert({
-      id: userId,
-      full_name: nm,
-      cohort: ch || null,
-      role: "student"
-    });
-
-    if(r3.error){
-      // Esto te dirá EXACTAMENTE si es RLS o algo de tabla
-      hardMsg("ERROR guardando profiles: " + r3.error.message, true);
-      alert("ERROR guardando profiles: " + r3.error.message);
-      return;
-    }
-
-    hardMsg("✅ Cuenta lista y perfil creado. Ya puedes entrar a módulos.", false);
-    await refresh();
-  } catch(err){
-    hardMsg("Error inesperado en signup: " + (err?.message || String(err)), true);
-    alert("Error inesperado en signup: " + (err?.message || String(err)));
-  } finally {
-    btn.disabled = false;
-  }
-});
-
-el("btnSignIn").addEventListener("click", async () => {
-  const btn = el("btnSignIn");
-  btn.disabled = true;
-  try{
-    hardMsg("Iniciando sesión...", false);
-
-    const em = email.value.trim();
-    const pw = password.value.trim();
-    if(!em || !pw){ hardMsg("Email y contraseña son obligatorios.", true); return; }
-
-    const r = await supabase.auth.signInWithPassword({ email: em, password: pw });
-    if(r.error){
-      hardMsg("Login falló: " + r.error.message, true);
-      alert("Login falló: " + r.error.message);
-      return;
-    }
-
-    hardMsg("✅ Sesión iniciada.", false);
-
-    // Asegurar profile (por si user existía sin profile)
-    const userId = r.data.user.id;
-    const nm = fullName.value.trim() || "Estudiante";
-    const ch = cohort.value.trim();
-
-    const prof = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
-    if(prof.error){
-      hardMsg("Sesión OK, pero error leyendo profile: " + prof.error.message, true);
-      alert("Error leyendo profile: " + prof.error.message);
-      return;
-    }
-
-    if(!prof.data){
-      const ins = await supabase.from("profiles").insert({
-        id: userId,
-        full_name: nm,
-        cohort: ch || null,
-        role: "student"
-      });
-      if(ins.error){
-        hardMsg("Login OK, pero NO pude crear profile: " + ins.error.message, true);
-        alert("NO pude crear profile: " + ins.error.message);
-        return;
-      }
-      hardMsg("Profile creado ✅", false);
-    }
-
-    await refresh();
-  } catch(err){
-    hardMsg("Error inesperado en login: " + (err?.message || String(err)), true);
-    alert("Error inesperado en login: " + (err?.message || String(err)));
-  } finally {
-    btn.disabled = false;
-  }
-});
-
-  el("btnSignOut").addEventListener("click", async () => {
-    await supabase.auth.signOut();
-    selectedModule = null;
-    modules = [];
-    quizQuestionsByModule.clear();
-    progressMap.clear();
-    myAttempts.clear();
-    detailBody.classList.add("hide");
-    renderModules();
-    await refresh();
-  });
-
-  el("btnResetAll").addEventListener("click", async () => {
-    if(!currentUser) return;
-    if(!confirm("¿Seguro? Esto borra checklist + quiz.")) return;
-
-    const r1 = await supabase.from("progress").delete().eq("user_id", currentUser.id);
-    const r2 = await supabase.from("quiz_attempts").delete().eq("user_id", currentUser.id);
-    if(r1.error) return alert(r1.error.message);
-    if(r2.error) return alert(r2.error.message);
-
-    progressMap.clear();
-    myAttempts.clear();
-    selectedModule = null;
-    detailBody.classList.add("hide");
-    renderModules();
-    await refresh();
-  });
-
-  btnToggleChecklist.addEventListener("click", async () => {
-    if(!selectedModule) return;
-    await toggleChecklist(selectedModule);
-    btnToggleChecklist.textContent = moduleChecklistDone(selectedModule) ? "Desmarcar checklist" : "Marcar checklist";
-  });
-
-  btnSubmitQuiz.addEventListener("click", async () => {
-    if(!selectedModule) return;
-    await submitQuiz(selectedModule);
-  });
-
-  // Refresh (CORREGIDO: solo carga módulos si hay sesión)
+  // ---- AUTH (a prueba de "no hace nada") ----
   async function refresh(){
-    const { data: { user } } = await supabase.auth.getUser();
+    // 1) obtén usuario
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if(error){
+      // Esto te dirá si hay problemas con cookies/sesión
+      console.error("getUser error:", error);
+    }
     currentUser = user || null;
 
     if(!currentUser){
@@ -893,7 +782,7 @@ el("btnSignIn").addEventListener("click", async () => {
       return;
     }
 
-    // Con sesión: ahora sí puede leer módulos/preguntas (RLS authenticated)
+    // 2) cargar perfil + data protegida por RLS
     currentProfile = await loadMyProfile();
 
     await loadModules();
@@ -913,13 +802,130 @@ el("btnSignIn").addEventListener("click", async () => {
     }
   }
 
-  // Refrescar cuando cambia estado de sesión
-  supabase.auth.onAuthStateChange(async () => { await refresh(); });
+  function lock(btn, locked){
+    btn.disabled = locked;
+    btn.textContent = locked ? "Procesando..." : (btn.id === "btnSignUp" ? "Crear cuenta" : "Iniciar sesión");
+  }
+
+  el("btnSignUp").addEventListener("click", async () => {
+    const btn = el("btnSignUp");
+    lock(btn, true);
+    setAuthMsg("", false);
+    try{
+      const nm = fullName.value.trim();
+      const ch = cohort.value.trim();
+      const em = email.value.trim();
+      const pw = password.value.trim();
+
+      if(!nm) return setAuthMsg("Escribe tu nombre completo.", true);
+      if(!em || !pw) return setAuthMsg("Email y contraseña son obligatorios.", true);
+
+      setAuthMsg("Creando cuenta...", false);
+
+      // Enviamos full_name en metadata para que el trigger lo use (si quieres)
+      const { error } = await supabase.auth.signUp({
+        email: em,
+        password: pw,
+        options: { data: { full_name: nm, cohort: ch || null } }
+      });
+
+      if(error){
+        return setAuthMsg("No se pudo crear cuenta: " + error.message, true);
+      }
+
+      // Importante: forzamos login (para que no quede “usuario creado pero sin sesión”)
+      setAuthMsg("Cuenta creada. Iniciando sesión...", false);
+      const r2 = await supabase.auth.signInWithPassword({ email: em, password: pw });
+      if(r2.error){
+        return setAuthMsg("Cuenta creada, pero login falló: " + r2.error.message, true);
+      }
+
+      setAuthMsg("✅ Listo. Ya puedes entrar a los módulos.", false);
+      await refresh();
+    } catch(err){
+      setAuthMsg("Error inesperado: " + (err?.message || String(err)), true);
+    } finally {
+      lock(btn, false);
+    }
+  });
+
+  el("btnSignIn").addEventListener("click", async () => {
+    const btn = el("btnSignIn");
+    lock(btn, true);
+    setAuthMsg("", false);
+    try{
+      const em = email.value.trim();
+      const pw = password.value.trim();
+      if(!em || !pw) return setAuthMsg("Email y contraseña son obligatorios.", true);
+
+      setAuthMsg("Iniciando sesión...", false);
+
+      const { error } = await supabase.auth.signInWithPassword({ email: em, password: pw });
+      if(error){
+        return setAuthMsg("Login falló: " + error.message, true);
+      }
+
+      setAuthMsg("✅ Sesión iniciada. Cargando módulos...", false);
+      await refresh();
+    } catch(err){
+      setAuthMsg("Error inesperado: " + (err?.message || String(err)), true);
+    } finally {
+      lock(btn, false);
+    }
+  });
+
+  el("btnSignOut").addEventListener("click", async () => {
+    setUserMsg("", false);
+    const { error } = await supabase.auth.signOut();
+    if(error){
+      setUserMsg("No pude cerrar sesión: " + error.message, true);
+      return;
+    }
+    selectedModule = null;
+    detailBody.classList.add("hide");
+    setUserMsg("Sesión cerrada ✅", false);
+    await refresh();
+  });
+
+  el("btnResetAll").addEventListener("click", async () => {
+    if(!currentUser) return;
+    if(!confirm("¿Seguro? Esto borra checklist + quiz.")) return;
+
+    const r1 = await supabase.from("progress").delete().eq("user_id", currentUser.id);
+    const r2 = await supabase.from("quiz_attempts").delete().eq("user_id", currentUser.id);
+    if(r1.error) return setUserMsg(r1.error.message, true);
+    if(r2.error) return setUserMsg(r2.error.message, true);
+
+    progressMap.clear();
+    myAttempts.clear();
+    selectedModule = null;
+    detailBody.classList.add("hide");
+    renderModules();
+    setUserMsg("Reinicio completo ✅", false);
+    await refresh();
+  });
+
+  btnToggleChecklist.addEventListener("click", async () => {
+    if(!selectedModule) return;
+    await toggleChecklist(selectedModule);
+    btnToggleChecklist.textContent = moduleChecklistDone(selectedModule) ? "Desmarcar checklist" : "Marcar checklist";
+  });
+
+  btnSubmitQuiz.addEventListener("click", async () => {
+    if(!selectedModule) return;
+    await submitQuiz(selectedModule);
+  });
+
+  // Refrescar cuando cambia auth (siempre)
+  supabase.auth.onAuthStateChange(async (event) => {
+    console.log("Auth event:", event);
+    await refresh();
+  });
 
   // init
   (async () => {
     try { await refresh(); }
-    catch(err){ alert("Error inicial: " + (err.message || err)); }
+    catch(err){ alert("Error inicial: " + (err?.message || err)); }
   })();
 </script>
 </body>
