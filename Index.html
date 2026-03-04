@@ -1,0 +1,857 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Curso Básico SAP RAP · ABAP S/4HANA</title>
+  <style>
+    :root { --bg:#0b1220; --card:#111b2e; --muted:#94a3b8; --txt:#e5e7eb; --acc:#22c55e; --warn:#f59e0b; --bad:#fb7185; --line:#23314f; }
+    body{ margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--txt); }
+    header{ position:sticky; top:0; background:rgba(11,18,32,.9); backdrop-filter: blur(8px); border-bottom:1px solid var(--line); z-index:10; }
+    .wrap{ max-width:1100px; margin:0 auto; padding:16px; }
+    .row{ display:flex; gap:14px; flex-wrap:wrap; align-items:center; }
+    .brand{ font-weight:800; letter-spacing:.2px; }
+    nav a{ color:var(--muted); text-decoration:none; margin-right:10px; font-size:14px; }
+    nav a:hover{ color:var(--txt); }
+    .pill{ padding:6px 10px; border:1px solid var(--line); border-radius:999px; font-size:12px; color:var(--muted); }
+    .grid{ display:grid; grid-template-columns: 340px 1fr; gap:16px; }
+    @media(max-width:980px){ .grid{ grid-template-columns:1fr; } }
+    .card{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; }
+    h1{ font-size:22px; margin:8px 0 4px; }
+    h2{ font-size:18px; margin:0 0 8px; }
+    h3{ font-size:15px; margin:16px 0 8px; color:#dbeafe; }
+    p{ color:var(--muted); line-height:1.45; margin:8px 0; }
+    .btn{ background:#1f2a44; border:1px solid var(--line); color:var(--txt); padding:10px 12px; border-radius:12px; cursor:pointer; }
+    .btn:hover{ border-color:#35507f; }
+    .btnAcc{ background:rgba(34,197,94,.14); border:1px solid rgba(34,197,94,.35); }
+    .btnWarn{ background:rgba(245,158,11,.14); border:1px solid rgba(245,158,11,.35); }
+    .btnBad{ background:rgba(251,113,133,.14); border:1px solid rgba(251,113,133,.35); }
+    input, select{ width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:#0e1628; color:var(--txt); }
+    label{ font-size:12px; color:var(--muted); display:block; margin:10px 0 6px; }
+    .small{ font-size:12px; color:var(--muted); }
+    .progress{ height:10px; background:#0e1628; border:1px solid var(--line); border-radius:999px; overflow:hidden; }
+    .bar{ height:100%; width:0%; background:var(--acc); transition: width .25s ease; }
+    .hr{ border-top:1px solid var(--line); margin:14px 0; }
+    .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px; background:#0e1628; border:1px solid var(--line); padding:10px; border-radius:12px; overflow:auto; }
+    .list{ display:flex; flex-direction:column; gap:10px; }
+    .mod{ display:flex; gap:10px; align-items:flex-start; padding:10px; border:1px solid var(--line); border-radius:12px; background:#0e1628; cursor:pointer; }
+    .mod:hover{ border-color:#35507f; }
+    .mod input{ width:18px; height:18px; margin-top:2px; pointer-events:none; }
+    .mod b{ display:block; font-size:13px; }
+    .mod span{ display:block; font-size:12px; color:var(--muted); }
+    .tag{ font-size:12px; padding:2px 8px; border-radius:999px; border:1px solid var(--line); color:var(--muted); display:inline-flex; align-items:center; gap:6px; }
+    .ok{ border-color:rgba(34,197,94,.35); color:#86efac; }
+    .warn{ border-color:rgba(245,158,11,.35); color:#fcd34d; }
+    .bad{ border-color:rgba(251,113,133,.35); color:#fecdd3; }
+    .hide{ display:none; }
+    table{ width:100%; border-collapse:collapse; }
+    th,td{ border-bottom:1px solid var(--line); padding:10px; text-align:left; font-size:13px; vertical-align:top; }
+    th{ color:#cbd5e1; font-weight:700; }
+    .quizQ{ border:1px solid var(--line); background:#0e1628; border-radius:12px; padding:10px; margin:10px 0; }
+    .optRow{ display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; }
+    .optBtn{ padding:8px 10px; border-radius:999px; border:1px solid var(--line); background:#0b1220; color:var(--txt); cursor:pointer; font-size:12px; }
+    .optBtn:hover{ border-color:#35507f; }
+    .optBtn.sel{ border-color:rgba(34,197,94,.45); background:rgba(34,197,94,.10); }
+  </style>
+</head>
+<body>
+<header>
+  <div class="wrap row" style="justify-content:space-between;">
+    <div class="row">
+      <div class="brand">SAP RAP Básico · ABAP S/4HANA</div>
+      <span class="pill" id="sessionPill">Sin sesión</span>
+      <span class="pill" id="rolePill">Rol: -</span>
+    </div>
+    <nav>
+      <a href="#inicio">Inicio</a>
+      <a href="#ruta">Ruta</a>
+      <a href="#detalle">Detalle</a>
+      <a href="#instructor" id="navInstructor" class="hide">Instructor</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap" id="inicio">
+  <div class="card">
+    <h1>Tu primera app RAP desde 0 (en modo “restaurante” 🍽️)</h1>
+    <p>
+      Vamos a construir una mini app “Gestión de Tareas” (CRUD) con RAP.
+      Lo importante no es memorizar keywords, sino entender el flujo:
+      <b>datos → comportamiento → servicio → UI</b>.
+    </p>
+    <div class="row">
+      <span class="tag">Checklist por módulo</span>
+      <span class="tag">Mini-quiz (2 preguntas/módulo)</span>
+      <span class="tag">Progreso guardado</span>
+    </div>
+  </div>
+
+  <div class="grid" style="margin-top:16px;">
+    <div class="card">
+      <h2>Registro / Acceso</h2>
+      <p class="small">Tu avance queda guardado para que el instructor lo revise cuando quiera.</p>
+
+      <div id="authBox">
+        <label>Nombre completo</label>
+        <input id="fullName" placeholder="Ej: Edgar Tovar" />
+
+        <label>Cohorte (opcional)</label>
+        <input id="cohort" placeholder="Ej: Marzo 2026" />
+
+        <div class="hr"></div>
+
+        <label>Email</label>
+        <input id="email" placeholder="tu@email.com" />
+
+        <label>Contraseña</label>
+        <input id="password" type="password" placeholder="mínimo 6 caracteres" />
+
+        <div class="row" style="margin-top:12px;">
+          <button class="btn btnAcc" id="btnSignUp">Crear cuenta</button>
+          <button class="btn" id="btnSignIn">Iniciar sesión</button>
+        </div>
+
+        <p class="small" id="authMsg"></p>
+      </div>
+
+      <div id="userBox" class="hide">
+        <p><b id="helloName">Hola</b></p>
+        <p class="small" id="helloEmail"></p>
+        <div class="row">
+          <button class="btn btnWarn" id="btnSignOut">Cerrar sesión</button>
+          <button class="btn btnBad" id="btnResetAll">Reiniciar TODO</button>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <h3>Progreso combinado</h3>
+      <p class="small">
+        El avance total combina:
+        <br/>- <b>Checklist</b> (50%)
+        <br/>- <b>Quiz</b> (50%) → se considera “aprobado” con ≥ 70%
+      </p>
+      <div class="progress"><div class="bar" id="progressBar"></div></div>
+      <p class="small"><span id="progressTxt">0%</span></p>
+    </div>
+
+    <div class="card" id="ruta">
+      <h2>Ruta (clic en un módulo)</h2>
+      <p class="small">Marca checklist y responde el mini-quiz para validar que “sí quedó”.</p>
+      <div class="list" id="modulesList"></div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap" id="detalle">
+  <div class="card">
+    <h2 id="detailTitle">Detalle del módulo</h2>
+    <p class="small" id="detailMeta">Selecciona un módulo de la ruta.</p>
+
+    <div id="detailBody" class="hide">
+      <div class="hr"></div>
+
+      <h3>Explicación con analogía</h3>
+      <p id="detailExplain"></p>
+
+      <h3>Ejercicio simple</h3>
+      <div class="mono" id="detailExercise"></div>
+
+      <div class="hr"></div>
+
+      <div class="row" style="justify-content:space-between;">
+        <div>
+          <span class="tag" id="checkTag">Checklist: pendiente</span>
+          <span class="tag" id="quizTag">Quiz: pendiente</span>
+        </div>
+        <button class="btn btnAcc" id="btnToggleChecklist">Marcar checklist</button>
+      </div>
+
+      <h3>Mini-quiz (2 preguntas)</h3>
+      <div id="quizBox"></div>
+
+      <div class="row">
+        <button class="btn btnAcc" id="btnSubmitQuiz">Calificar quiz</button>
+        <span class="small" id="quizMsg"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <h2>RAP en 60 segundos (la idea central)</h2>
+    <p>
+      RAP es un <b>modo ordenado</b> de construir apps:
+      <br/>- <b>CDS</b> = “ingredientes” (modelo/metadata)
+      <br/>- <b>Behavior</b> = “receta” (reglas, acciones, validaciones)
+      <br/>- <b>Implementación</b> = “chef” (lógica ABAP)
+      <br/>- <b>Service</b> = “mesero” (OData)
+      <br/>- <b>Fiori Elements</b> = “menú” (UI generada)
+    </p>
+  </div>
+
+  <div class="card hide" style="margin-top:16px;" id="instructor">
+    <h2>Panel del Instructor</h2>
+    <p class="small">Avance por estudiante (checklist + quiz). Solo visible con rol instructor.</p>
+    <div class="hr"></div>
+    <table>
+      <thead>
+        <tr>
+          <th>Estudiante</th>
+          <th>Cohorte</th>
+          <th>Checklist</th>
+          <th>Quiz</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody id="instructorTable"></tbody>
+    </table>
+  </div>
+</div>
+
+<script type="module">
+  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+  // TODO: Reemplaza con tus valores
+  const SUPABASE_URL = "https://zuwtnkfxxbidtzsmoexy.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1d3Rua2Z4eGJpZHR6c21vZXh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2NDAzOTUsImV4cCI6MjA4ODIxNjM5NX0.KX18kWCxdLl44e6A-ZUenU5IFuFiHXk38sq_W_-V_rA";
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const el = (id) => document.getElementById(id);
+
+  // UI refs
+  const sessionPill = el("sessionPill");
+  const rolePill = el("rolePill");
+  const navInstructor = el("navInstructor");
+  const instructorSection = el("instructor");
+
+  const authBox = el("authBox");
+  const userBox = el("userBox");
+  const authMsg = el("authMsg");
+
+  const fullName = el("fullName");
+  const cohort = el("cohort");
+  const email = el("email");
+  const password = el("password");
+
+  const helloName = el("helloName");
+  const helloEmail = el("helloEmail");
+
+  const modulesList = el("modulesList");
+  const progressBar = el("progressBar");
+  const progressTxt = el("progressTxt");
+
+  const detailTitle = el("detailTitle");
+  const detailMeta = el("detailMeta");
+  const detailBody = el("detailBody");
+  const detailExplain = el("detailExplain");
+  const detailExercise = el("detailExercise");
+
+  const checkTag = el("checkTag");
+  const quizTag = el("quizTag");
+  const btnToggleChecklist = el("btnToggleChecklist");
+
+  const quizBox = el("quizBox");
+  const btnSubmitQuiz = el("btnSubmitQuiz");
+  const quizMsg = el("quizMsg");
+
+  const instructorTable = el("instructorTable");
+
+  // State
+  let currentUser = null;
+  let currentProfile = null;
+
+  let modules = [];
+  let progressMap = new Map(); // module_code -> completed bool
+
+  let quizQuestionsByModule = new Map(); // module_code -> [{id,...}]
+  let myAttempts = new Map(); // module_code -> {answers, score, total, passed}
+
+  let selectedModule = null;
+  let selectedAnswers = {}; // {question_id: "A"|"B"|"C"}
+
+  // Course content (pedagógico + fresco; lo justo)
+  const CONTENT = {
+    M01: {
+      explain: "RAP es como un restaurante bien organizado: defines ingredientes (CDS), la receta (Behavior), el chef (implementación ABAP), el mesero (servicio OData) y el menú bonito (Fiori Elements). Así construyes apps rápido y consistente.",
+      exercise: "Ejercicio: escribe en una hoja (o bloc de notas) qué sería en tu negocio:\n- Ingredientes = ¿qué datos?\n- Receta = ¿qué puede hacer el usuario?\n- Chef = ¿qué reglas se validan?\n- Mesero = ¿cómo lo consumirá el frontend?"
+    },
+    M02: {
+      explain: "La CDS View Entity es tu ‘vista del mundo’: qué campos existen, cómo se llaman y cómo se exponen. No es solo SELECT: es el contrato semántico para todo lo demás.",
+      exercise:
+`Define tu entidad Tarea:
+Campos: UUID, Title, Status, CreatedBy, CreatedAt.
+Tip: piensa en qué campos son key y cuáles se calculan/llenan solos.`
+    },
+    M03: {
+      explain: "Behavior Definition es la receta: aquí decides si hay create/update/delete, si hay validaciones, acciones, y cómo se maneja el locking. Si el usuario pide “cambiar el plato”, la receta dice si se puede.",
+      exercise:
+`Lista 3 reglas de negocio:
+1) Title no puede ir vacío
+2) Status solo puede ser OPEN o DONE
+3) Si está DONE, no permitir cambiar Title (opcional)`
+    },
+    M04: {
+      explain: "La Behavior Implementation es el chef: aquí escribes ABAP para validar, determinar valores por defecto, o calcular cosas. No cocinas en la receta; cocinas en el chef.",
+      exercise:
+`Implementa mentalmente:
+- determination setDefaultStatus: si Status inicial vacío → OPEN
+- validation validateTitle: si Title vacío → error claro`
+    },
+    M05: {
+      explain: "Service Definition + Binding es el mesero: toma tus entidades y las publica como un servicio (OData). Aquí es donde ‘sale al mundo’ lo que construiste.",
+      exercise:
+`Checklist mental:
+- Definí Service Definition exponiendo ZI_TASK
+- Creé Service Binding (OData)
+- Publiqué y abrí el preview del servicio`
+    },
+    M06: {
+      explain: "Fiori Elements es el menú: genera UI con base en metadata/annotations. Menos código UI5 manual, más consistencia. Ideal para tu primera app RAP.",
+      exercise:
+`Meta:
+- List Report (lista)
+- Object Page (detalle)
+Prueba: crear una tarea y editar su status.`
+    },
+    M07: {
+      explain: "Validaciones y mensajes son control de calidad: el usuario necesita saber exactamente qué falló y cómo arreglarlo. ‘Error 500’ no enseña nada.",
+      exercise:
+`Redacta 2 mensajes:
+- “El título es obligatorio”
+- “El estado debe ser OPEN o DONE”`
+    },
+    M08: {
+      explain: "Cierre: si logras CRUD + validaciones + servicio publicado + UI navegable, ya tienes tu primera app RAP real. La segunda app será muchísimo más fácil.",
+      exercise:
+`Checklist final:
+1) CDS activa
+2) Behavior activa
+3) Servicio publicado
+4) UI lista
+5) Probé CRUD con 3 registros`
+    }
+  };
+
+  // Utils
+  const pct = (n, d) => (d === 0 ? 0 : Math.round((n / d) * 100));
+
+  function setMsg(txt, isError=false){
+    authMsg.textContent = txt || "";
+    authMsg.style.color = isError ? "#fca5a5" : "#a7f3d0";
+  }
+
+  function setQuizMsg(txt, tone="muted"){
+    quizMsg.textContent = txt || "";
+    quizMsg.style.color =
+      tone === "ok" ? "#86efac" :
+      tone === "bad" ? "#fecdd3" :
+      tone === "warn" ? "#fcd34d" : "#94a3b8";
+  }
+
+  function isQuizPassed(moduleCode){
+    const a = myAttempts.get(moduleCode);
+    return a?.passed === true;
+  }
+
+  function moduleChecklistDone(moduleCode){
+    return progressMap.get(moduleCode) === true;
+  }
+
+  function calcChecklistPct(){
+    const total = modules.length;
+    const done = modules.filter(m => moduleChecklistDone(m.code)).length;
+    return pct(done, total);
+  }
+
+  function calcQuizPct(){
+    // % de módulos cuyo quiz está passed
+    const total = modules.length;
+    const done = modules.filter(m => isQuizPassed(m.code)).length;
+    return pct(done, total);
+  }
+
+  function calcTotalPct(){
+    // 50% checklist + 50% quiz
+    const c = calcChecklistPct();
+    const q = calcQuizPct();
+    return Math.round((c * 0.5) + (q * 0.5));
+  }
+
+  function renderTotalProgress(){
+    const total = calcTotalPct();
+    progressBar.style.width = total + "%";
+    progressTxt.textContent = `${total}% (Checklist ${calcChecklistPct()}% + Quiz ${calcQuizPct()}%)`;
+  }
+
+  function moduleStatusTag(moduleCode){
+    const c = moduleChecklistDone(moduleCode);
+    const q = isQuizPassed(moduleCode);
+
+    if(c && q) return `<span class="tag ok">OK</span>`;
+    if(c || q) return `<span class="tag warn">En progreso</span>`;
+    return `<span class="tag">Pendiente</span>`;
+  }
+
+  function renderModules(){
+    modulesList.innerHTML = "";
+    modules.forEach(m => {
+      const div = document.createElement("div");
+      div.className = "mod";
+      const checked = moduleChecklistDone(m.code);
+
+      div.innerHTML = `
+        <input type="checkbox" ${checked ? "checked" : ""} />
+        <div style="flex:1;">
+          <b>${m.code} · ${m.title}</b>
+          <span>Estimado: ${m.est_minutes} min · ${moduleStatusTag(m.code)}</span>
+        </div>
+      `;
+
+      div.addEventListener("click", () => selectModule(m.code));
+      modulesList.appendChild(div);
+    });
+
+    renderTotalProgress();
+  }
+
+  function setAuthUI(){
+    const logged = !!currentUser;
+    authBox.classList.toggle("hide", logged);
+    userBox.classList.toggle("hide", !logged);
+
+    sessionPill.textContent = logged ? "Sesión activa" : "Sin sesión";
+    helloEmail.textContent = logged ? currentUser.email : "";
+    helloName.textContent = logged ? ("Hola, " + (currentProfile?.full_name || "estudiante")) : "Hola";
+
+    const role = currentProfile?.role || "-";
+    rolePill.textContent = "Rol: " + role;
+
+    const isInstructor = role === "instructor";
+    navInstructor.classList.toggle("hide", !isInstructor);
+    instructorSection.classList.toggle("hide", !isInstructor);
+  }
+
+  async function ensureProfile(full_name, cohortTxt){
+    const { data: { user } } = await supabase.auth.getUser();
+    if(!user) return;
+
+    const { error } = await supabase.from("profiles").insert({
+      id: user.id,
+      full_name,
+      cohort: cohortTxt || null,
+      role: "student"
+    });
+
+    if(error && !String(error.message).toLowerCase().includes("duplicate")){
+      throw error;
+    }
+  }
+
+  // Data loaders
+  async function loadModules(){
+    const { data, error } = await supabase
+      .from("modules")
+      .select("*")
+      .order("order_no", { ascending: true });
+    if(error) throw error;
+    modules = data || [];
+  }
+
+  async function loadMyProfile(){
+    if(!currentUser) return null;
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", currentUser.id)
+      .maybeSingle();
+    if(error) throw error;
+    return data;
+  }
+
+  async function loadMyProgress(){
+    progressMap.clear();
+    if(!currentUser) return;
+
+    const { data, error } = await supabase
+      .from("progress")
+      .select("module_code, completed")
+      .eq("user_id", currentUser.id);
+    if(error) throw error;
+
+    (data || []).forEach(r => progressMap.set(r.module_code, r.completed));
+  }
+
+  async function loadQuizQuestions(){
+    quizQuestionsByModule.clear();
+    const { data, error } = await supabase
+      .from("quiz_questions")
+      .select("id, module_code, question, opt_a, opt_b, opt_c, order_no")
+      .order("module_code", { ascending: true })
+      .order("order_no", { ascending: true });
+
+    if(error) throw error;
+
+    (data || []).forEach(q => {
+      const arr = quizQuestionsByModule.get(q.module_code) || [];
+      arr.push(q);
+      quizQuestionsByModule.set(q.module_code, arr);
+    });
+  }
+
+  async function loadMyAttempts(){
+    myAttempts.clear();
+    if(!currentUser) return;
+
+    const { data, error } = await supabase
+      .from("quiz_attempts")
+      .select("module_code, answers, score, total, passed")
+      .eq("user_id", currentUser.id);
+
+    if(error) throw error;
+
+    (data || []).forEach(a => myAttempts.set(a.module_code, a));
+  }
+
+  // Checklist toggle
+  async function toggleChecklist(moduleCode){
+    if(!currentUser) return alert("Inicia sesión para guardar avance.");
+
+    const newVal = !moduleChecklistDone(moduleCode);
+    progressMap.set(moduleCode, newVal);
+
+    const { error } = await supabase
+      .from("progress")
+      .upsert({
+        user_id: currentUser.id,
+        module_code: moduleCode,
+        completed: newVal,
+        updated_at: new Date().toISOString()
+      });
+
+    if(error){
+      progressMap.set(moduleCode, !newVal);
+      alert("No se pudo guardar checklist: " + error.message);
+      return;
+    }
+
+    renderModules();
+    renderDetailStatus(moduleCode);
+  }
+
+  function renderDetailStatus(moduleCode){
+    const c = moduleChecklistDone(moduleCode);
+    const q = isQuizPassed(moduleCode);
+
+    checkTag.className = "tag " + (c ? "ok" : "");
+    checkTag.textContent = "Checklist: " + (c ? "completado" : "pendiente");
+
+    const attempt = myAttempts.get(moduleCode);
+    if(attempt){
+      quizTag.className = "tag " + (attempt.passed ? "ok" : "warn");
+      quizTag.textContent = `Quiz: ${attempt.score}/${attempt.total} (${attempt.passed ? "aprobado" : "pendiente"})`;
+    } else {
+      quizTag.className = "tag";
+      quizTag.textContent = "Quiz: pendiente";
+    }
+  }
+
+  // Quiz UI
+  function renderQuiz(moduleCode){
+    quizBox.innerHTML = "";
+    setQuizMsg("");
+
+    const qs = quizQuestionsByModule.get(moduleCode) || [];
+    const attempt = myAttempts.get(moduleCode);
+    selectedAnswers = attempt?.answers ? structuredClone(attempt.answers) : {};
+
+    qs.forEach(q => {
+      const wrap = document.createElement("div");
+      wrap.className = "quizQ";
+      wrap.innerHTML = `
+        <div><b>${q.question}</b></div>
+        <div class="optRow">
+          <button class="optBtn" data-qid="${q.id}" data-opt="A">A) ${q.opt_a}</button>
+          <button class="optBtn" data-qid="${q.id}" data-opt="B">B) ${q.opt_b}</button>
+          <button class="optBtn" data-qid="${q.id}" data-opt="C">C) ${q.opt_c}</button>
+        </div>
+      `;
+      quizBox.appendChild(wrap);
+    });
+
+    // apply selected state
+    quizBox.querySelectorAll(".optBtn").forEach(btn => {
+      const qid = btn.getAttribute("data-qid");
+      const opt = btn.getAttribute("data-opt");
+      if(selectedAnswers?.[qid] === opt) btn.classList.add("sel");
+
+      btn.addEventListener("click", () => {
+        const qid2 = btn.getAttribute("data-qid");
+        const opt2 = btn.getAttribute("data-opt");
+        selectedAnswers[qid2] = opt2;
+
+        // refresh selection for same question
+        quizBox.querySelectorAll(`.optBtn[data-qid="${qid2}"]`).forEach(b => b.classList.remove("sel"));
+        btn.classList.add("sel");
+      });
+    });
+
+    // show last result
+    if(attempt){
+      setQuizMsg(`Último intento: ${attempt.score}/${attempt.total} (${attempt.passed ? "aprobado" : "no aprobado"})`, attempt.passed ? "ok" : "warn");
+    }
+  }
+
+  async function submitQuiz(moduleCode){
+    if(!currentUser) return alert("Inicia sesión para calificar el quiz.");
+
+    const qs = quizQuestionsByModule.get(moduleCode) || [];
+    const total = qs.length;
+
+    // Validar que respondan todo
+    for(const q of qs){
+      if(!selectedAnswers[String(q.id)]){
+        setQuizMsg("Responde todas las preguntas antes de calificar.", "warn");
+        return;
+      }
+    }
+
+    // Calificar en backend (sin exponer correctas al frontend):
+    // Para mantenerlo simple, hacemos la calificación aquí PERO sin traer correct_opt.
+    // Mejor práctica: usar una RPC o Edge Function.
+    // En esta versión didáctica, traemos correct_opt solo al calificar (mínimo riesgo en un curso).
+    const { data: keys, error } = await supabase
+      .from("quiz_questions")
+      .select("id, correct_opt")
+      .eq("module_code", moduleCode);
+
+    if(error){
+      setQuizMsg("No pude calificar ahora: " + error.message, "bad");
+      return;
+    }
+
+    const correctMap = new Map((keys || []).map(k => [String(k.id), k.correct_opt]));
+    let score = 0;
+    for(const q of qs){
+      const qid = String(q.id);
+      if(selectedAnswers[qid] === correctMap.get(qid)) score++;
+    }
+
+    const passed = total === 0 ? false : (score / total) >= 0.70;
+
+    const payload = {
+      user_id: currentUser.id,
+      module_code: moduleCode,
+      answers: selectedAnswers,
+      score,
+      total,
+      passed,
+      updated_at: new Date().toISOString()
+    };
+
+    const { error: e2 } = await supabase.from("quiz_attempts").upsert(payload);
+    if(e2){
+      setQuizMsg("No pude guardar tu intento: " + e2.message, "bad");
+      return;
+    }
+
+    myAttempts.set(moduleCode, { module_code: moduleCode, answers: selectedAnswers, score, total, passed });
+    renderModules();
+    renderDetailStatus(moduleCode);
+
+    setQuizMsg(`Resultado: ${score}/${total} (${passed ? "APROBADO ✅" : "Aún no 😅"})`, passed ? "ok" : "warn");
+
+    // Si es instructor, refrescar dashboard
+    if(currentProfile?.role === "instructor"){
+      await loadInstructorDashboard();
+    }
+  }
+
+  // Module selection
+  function selectModule(moduleCode){
+    selectedModule = moduleCode;
+
+    const m = modules.find(x => x.code === moduleCode);
+    const c = CONTENT[moduleCode] || { explain:"", exercise:"" };
+
+    detailTitle.textContent = `${m.code} · ${m.title}`;
+    detailMeta.textContent = `Objetivo del módulo: entiende el concepto y valida con el mini-quiz.`;
+    detailBody.classList.remove("hide");
+
+    detailExplain.textContent = c.explain || "";
+    detailExercise.textContent = c.exercise || "";
+
+    btnToggleChecklist.textContent = moduleChecklistDone(moduleCode) ? "Desmarcar checklist" : "Marcar checklist";
+    renderDetailStatus(moduleCode);
+    renderQuiz(moduleCode);
+
+    // scroll suave
+    location.hash = "#detalle";
+  }
+
+  // Instructor dashboard
+  async function loadInstructorDashboard(){
+    instructorTable.innerHTML = "";
+
+    const { data: profiles, error: e1 } = await supabase
+      .from("profiles")
+      .select("id, full_name, role, cohort, created_at")
+      .order("created_at", { ascending: false });
+    if(e1) throw e1;
+
+    const { data: progressRows, error: e2 } = await supabase
+      .from("progress")
+      .select("user_id, module_code, completed");
+    if(e2) throw e2;
+
+    const { data: attemptsRows, error: e3 } = await supabase
+      .from("quiz_attempts")
+      .select("user_id, module_code, passed");
+    if(e3) throw e3;
+
+    const totalMods = modules.length;
+
+    const checklistByUser = new Map(); // user_id -> count completed
+    (progressRows || []).forEach(r => {
+      if(r.completed) checklistByUser.set(r.user_id, (checklistByUser.get(r.user_id)||0) + 1);
+    });
+
+    const quizByUser = new Map(); // user_id -> count passed
+    (attemptsRows || []).forEach(a => {
+      if(a.passed) quizByUser.set(a.user_id, (quizByUser.get(a.user_id)||0) + 1);
+    });
+
+    (profiles || []).forEach(p => {
+      if(p.role !== "student") return;
+
+      const cDone = checklistByUser.get(p.id) || 0;
+      const qDone = quizByUser.get(p.id) || 0;
+
+      const cPct = pct(cDone, totalMods);
+      const qPct = pct(qDone, totalMods);
+      const total = Math.round((cPct*0.5) + (qPct*0.5));
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${p.full_name}</td>
+        <td>${p.cohort || ""}</td>
+        <td><span class="tag ${cPct===100 ? "ok":"warn"}">${cPct}%</span> <span class="small">(${cDone}/${totalMods})</span></td>
+        <td><span class="tag ${qPct===100 ? "ok":"warn"}">${qPct}%</span> <span class="small">(${qDone}/${totalMods})</span></td>
+        <td><span class="tag ${total===100 ? "ok":"warn"}">${total}%</span></td>
+      `;
+      instructorTable.appendChild(tr);
+    });
+  }
+
+  // Buttons
+  el("btnSignUp").addEventListener("click", async () => {
+    try{
+      setMsg("");
+      const nm = fullName.value.trim();
+      const em = email.value.trim();
+      const pw = password.value.trim();
+      if(!nm) return setMsg("Escribe tu nombre completo.", true);
+      if(!em || !pw) return setMsg("Email y contraseña son obligatorios.", true);
+
+      const { error } = await supabase.auth.signUp({ email: em, password: pw });
+      if(error) throw error;
+
+      await ensureProfile(nm, cohort.value.trim());
+      setMsg("Cuenta creada. Inicia sesión para comenzar.");
+      await refresh();
+    } catch(err){
+      setMsg(err.message || String(err), true);
+    }
+  });
+
+  el("btnSignIn").addEventListener("click", async () => {
+    try{
+      setMsg("");
+      const em = email.value.trim();
+      const pw = password.value.trim();
+      const { error } = await supabase.auth.signInWithPassword({ email: em, password: pw });
+      if(error) throw error;
+
+      setMsg("Sesión iniciada.");
+      await refresh();
+    } catch(err){
+      setMsg(err.message || String(err), true);
+    }
+  });
+
+  el("btnSignOut").addEventListener("click", async () => {
+    await supabase.auth.signOut();
+    await refresh();
+  });
+
+  el("btnResetAll").addEventListener("click", async () => {
+    if(!currentUser) return;
+    if(!confirm("¿Seguro? Esto borra checklist + quiz.")) return;
+
+    const e1 = await supabase.from("progress").delete().eq("user_id", currentUser.id);
+    const e2 = await supabase.from("quiz_attempts").delete().eq("user_id", currentUser.id);
+
+    if(e1.error) return alert(e1.error.message);
+    if(e2.error) return alert(e2.error.message);
+
+    progressMap.clear();
+    myAttempts.clear();
+    selectedModule = null;
+
+    detailBody.classList.add("hide");
+    detailTitle.textContent = "Detalle del módulo";
+    detailMeta.textContent = "Selecciona un módulo de la ruta.";
+
+    renderModules();
+  });
+
+  btnToggleChecklist.addEventListener("click", async () => {
+    if(!selectedModule) return;
+    await toggleChecklist(selectedModule);
+    btnToggleChecklist.textContent = moduleChecklistDone(selectedModule) ? "Desmarcar checklist" : "Marcar checklist";
+  });
+
+  btnSubmitQuiz.addEventListener("click", async () => {
+    if(!selectedModule) return;
+    await submitQuiz(selectedModule);
+  });
+
+  // Refresh
+  async function refresh(){
+    await loadModules();
+    await loadQuizQuestions();
+
+    const { data: { user } } = await supabase.auth.getUser();
+    currentUser = user || null;
+    currentProfile = await loadMyProfile();
+
+    if(currentUser){
+      await loadMyProgress();
+      await loadMyAttempts();
+    } else {
+      progressMap.clear();
+      myAttempts.clear();
+    }
+
+    setAuthUI();
+    renderModules();
+
+    // Si había un módulo seleccionado, re-render detalle
+    if(selectedModule){
+      selectModule(selectedModule);
+    }
+
+    if(currentProfile?.role === "instructor"){
+      await loadInstructorDashboard();
+    }
+  }
+
+  supabase.auth.onAuthStateChange(async () => { await refresh(); });
+
+  (async () => {
+    try { await refresh(); }
+    catch(err){ alert("Error inicial: " + (err.message || err)); }
+  })();
+</script>
+</body>
+</html>
