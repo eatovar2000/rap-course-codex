@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
@@ -26,13 +26,13 @@
     .btnAcc{ background:rgba(34,197,94,.14); border:1px solid rgba(34,197,94,.35); }
     .btnWarn{ background:rgba(245,158,11,.14); border:1px solid rgba(245,158,11,.35); }
     .btnBad{ background:rgba(251,113,133,.14); border:1px solid rgba(251,113,133,.35); }
-    input, select{ width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:#0e1628; color:var(--txt); }
+    input{ width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:#0e1628; color:var(--txt); }
     label{ font-size:12px; color:var(--muted); display:block; margin:10px 0 6px; }
     .small{ font-size:12px; color:var(--muted); }
     .progress{ height:10px; background:#0e1628; border:1px solid var(--line); border-radius:999px; overflow:hidden; }
     .bar{ height:100%; width:0%; background:var(--acc); transition: width .25s ease; }
     .hr{ border-top:1px solid var(--line); margin:14px 0; }
-    .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px; background:#0e1628; border:1px solid var(--line); padding:10px; border-radius:12px; overflow:auto; }
+    .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px; background:#0e1628; border:1px solid var(--line); padding:10px; border-radius:12px; overflow:auto; white-space:pre-wrap; }
     .list{ display:flex; flex-direction:column; gap:10px; }
     .mod{ display:flex; gap:10px; align-items:flex-start; padding:10px; border:1px solid var(--line); border-radius:12px; background:#0e1628; cursor:pointer; }
     .mod:hover{ border-color:#35507f; }
@@ -52,6 +52,9 @@
     .optBtn{ padding:8px 10px; border-radius:999px; border:1px solid var(--line); background:#0b1220; color:var(--txt); cursor:pointer; font-size:12px; }
     .optBtn:hover{ border-color:#35507f; }
     .optBtn.sel{ border-color:rgba(34,197,94,.45); background:rgba(34,197,94,.10); }
+    details{ border:1px solid var(--line); border-radius:12px; background:#0e1628; padding:10px; }
+    details summary{ cursor:pointer; color:#cbd5e1; font-weight:700; }
+    .failItem{ border:1px solid var(--line); border-radius:12px; padding:10px; margin-top:10px; background:#0b1220; }
   </style>
 </head>
 <body>
@@ -73,15 +76,15 @@
 
 <div class="wrap" id="inicio">
   <div class="card">
-    <h1>Tu primera app RAP desde 0 (en modo “restaurante” 🍽️)</h1>
+    <h1>Tu primera app RAP desde 0 (modo “restaurante” 🍽️)</h1>
     <p>
-      Vamos a construir una mini app “Gestión de Tareas” (CRUD) con RAP.
-      Lo importante no es memorizar keywords, sino entender el flujo:
-      <b>datos → comportamiento → servicio → UI</b>.
+      Construimos una mini app “Gestión de Tareas” (CRUD) con RAP.
+      Flujo mental: <b>datos → comportamiento → servicio → UI</b>.
     </p>
     <div class="row">
       <span class="tag">Checklist por módulo</span>
       <span class="tag">Mini-quiz (2 preguntas/módulo)</span>
+      <span class="tag">Aprobado = 100%</span>
       <span class="tag">Progreso guardado</span>
     </div>
   </div>
@@ -104,7 +107,7 @@
         <input id="email" placeholder="tu@email.com" />
 
         <label>Contraseña</label>
-        <input id="password" type="password" placeholder="mínimo 6 caracteres" />
+        <input id="password" type="password" placeholder="mínimo 6 caracteres" minlength="6" />
 
         <div class="row" style="margin-top:12px;">
           <button class="btn btnAcc" id="btnSignUp">Crear cuenta</button>
@@ -127,9 +130,7 @@
 
       <h3>Progreso combinado</h3>
       <p class="small">
-        El avance total combina:
-        <br/>- <b>Checklist</b> (50%)
-        <br/>- <b>Quiz</b> (50%) → se considera “aprobado” con ≥ 70%
+        Total = 50% checklist + 50% quiz (módulos aprobados al 100%).
       </p>
       <div class="progress"><div class="bar" id="progressBar"></div></div>
       <p class="small"><span id="progressTxt">0%</span></p>
@@ -137,7 +138,7 @@
 
     <div class="card" id="ruta">
       <h2>Ruta (clic en un módulo)</h2>
-      <p class="small">Marca checklist y responde el mini-quiz para validar que “sí quedó”.</p>
+      <p class="small">Marca checklist y aprueba el quiz (100%) para cerrar el módulo.</p>
       <div class="list" id="modulesList"></div>
     </div>
   </div>
@@ -178,20 +179,21 @@
   </div>
 
   <div class="card" style="margin-top:16px;">
-    <h2>RAP en 60 segundos (la idea central)</h2>
+    <h2>RAP en 60 segundos</h2>
     <p>
-      RAP es un <b>modo ordenado</b> de construir apps:
-      <br/>- <b>CDS</b> = “ingredientes” (modelo/metadata)
-      <br/>- <b>Behavior</b> = “receta” (reglas, acciones, validaciones)
-      <br/>- <b>Implementación</b> = “chef” (lógica ABAP)
-      <br/>- <b>Service</b> = “mesero” (OData)
-      <br/>- <b>Fiori Elements</b> = “menú” (UI generada)
+      - <b>CDS</b> = ingredientes (modelo/metadata) <br/>
+      - <b>Behavior</b> = receta (reglas, acciones, validaciones) <br/>
+      - <b>Implementación</b> = chef (lógica ABAP) <br/>
+      - <b>Service</b> = mesero (OData) <br/>
+      - <b>Fiori Elements</b> = menú (UI generada)
     </p>
   </div>
 
   <div class="card hide" style="margin-top:16px;" id="instructor">
     <h2>Panel del Instructor</h2>
-    <p class="small">Avance por estudiante (checklist + quiz). Solo visible con rol instructor.</p>
+    <p class="small">
+      Avance por estudiante + detalle de fallos (pregunta, respondió, correcta).
+    </p>
     <div class="hr"></div>
     <table>
       <thead>
@@ -199,8 +201,9 @@
           <th>Estudiante</th>
           <th>Cohorte</th>
           <th>Checklist</th>
-          <th>Quiz</th>
+          <th>Quiz (100%)</th>
           <th>Total</th>
+          <th>Detalle</th>
         </tr>
       </thead>
       <tbody id="instructorTable"></tbody>
@@ -211,11 +214,11 @@
 <script type="module">
   import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
-  // TODO: Reemplaza con tus valores
+  // ✅ Tus credenciales (OK para frontend)
   const SUPABASE_URL = "https://zuwtnkfxxbidtzsmoexy.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1d3Rua2Z4eGJpZHR6c21vZXh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2NDAzOTUsImV4cCI6MjA4ODIxNjM5NX0.KX18kWCxdLl44e6A-ZUenU5IFuFiHXk38sq_W_-V_rA";
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const el = (id) => document.getElementById(id);
 
   // UI refs
@@ -269,67 +272,19 @@
   let selectedModule = null;
   let selectedAnswers = {}; // {question_id: "A"|"B"|"C"}
 
-  // Course content (pedagógico + fresco; lo justo)
+  // Content (ligero)
   const CONTENT = {
     M01: {
-      explain: "RAP es como un restaurante bien organizado: defines ingredientes (CDS), la receta (Behavior), el chef (implementación ABAP), el mesero (servicio OData) y el menú bonito (Fiori Elements). Así construyes apps rápido y consistente.",
-      exercise: "Ejercicio: escribe en una hoja (o bloc de notas) qué sería en tu negocio:\n- Ingredientes = ¿qué datos?\n- Receta = ¿qué puede hacer el usuario?\n- Chef = ¿qué reglas se validan?\n- Mesero = ¿cómo lo consumirá el frontend?"
+      explain: "RAP es un restaurante bien organizado: ingredientes (CDS), receta (Behavior), chef (ABAP), mesero (OData), menú (Fiori Elements).",
+      exercise: "Ejercicio: mapea tu caso real a la analogía:\n- Ingredientes: ¿qué datos?\n- Receta: ¿qué operaciones?\n- Chef: ¿qué validas?\n- Mesero: ¿cómo lo consumes?"
     },
-    M02: {
-      explain: "La CDS View Entity es tu ‘vista del mundo’: qué campos existen, cómo se llaman y cómo se exponen. No es solo SELECT: es el contrato semántico para todo lo demás.",
-      exercise:
-`Define tu entidad Tarea:
-Campos: UUID, Title, Status, CreatedBy, CreatedAt.
-Tip: piensa en qué campos son key y cuáles se calculan/llenan solos.`
-    },
-    M03: {
-      explain: "Behavior Definition es la receta: aquí decides si hay create/update/delete, si hay validaciones, acciones, y cómo se maneja el locking. Si el usuario pide “cambiar el plato”, la receta dice si se puede.",
-      exercise:
-`Lista 3 reglas de negocio:
-1) Title no puede ir vacío
-2) Status solo puede ser OPEN o DONE
-3) Si está DONE, no permitir cambiar Title (opcional)`
-    },
-    M04: {
-      explain: "La Behavior Implementation es el chef: aquí escribes ABAP para validar, determinar valores por defecto, o calcular cosas. No cocinas en la receta; cocinas en el chef.",
-      exercise:
-`Implementa mentalmente:
-- determination setDefaultStatus: si Status inicial vacío → OPEN
-- validation validateTitle: si Title vacío → error claro`
-    },
-    M05: {
-      explain: "Service Definition + Binding es el mesero: toma tus entidades y las publica como un servicio (OData). Aquí es donde ‘sale al mundo’ lo que construiste.",
-      exercise:
-`Checklist mental:
-- Definí Service Definition exponiendo ZI_TASK
-- Creé Service Binding (OData)
-- Publiqué y abrí el preview del servicio`
-    },
-    M06: {
-      explain: "Fiori Elements es el menú: genera UI con base en metadata/annotations. Menos código UI5 manual, más consistencia. Ideal para tu primera app RAP.",
-      exercise:
-`Meta:
-- List Report (lista)
-- Object Page (detalle)
-Prueba: crear una tarea y editar su status.`
-    },
-    M07: {
-      explain: "Validaciones y mensajes son control de calidad: el usuario necesita saber exactamente qué falló y cómo arreglarlo. ‘Error 500’ no enseña nada.",
-      exercise:
-`Redacta 2 mensajes:
-- “El título es obligatorio”
-- “El estado debe ser OPEN o DONE”`
-    },
-    M08: {
-      explain: "Cierre: si logras CRUD + validaciones + servicio publicado + UI navegable, ya tienes tu primera app RAP real. La segunda app será muchísimo más fácil.",
-      exercise:
-`Checklist final:
-1) CDS activa
-2) Behavior activa
-3) Servicio publicado
-4) UI lista
-5) Probé CRUD con 3 registros`
-    }
+    M02: { explain: "CDS define el contrato de datos (semántico) que se consume en servicio/UI.", exercise: "Define entidad Tarea: UUID, Title, Status, CreatedBy, CreatedAt.\nTip: ¿qué campos se llenan solos?" },
+    M03: { explain: "Behavior es la receta: CRUD, validaciones, acciones, locks.", exercise: "Define reglas:\n1) Title obligatorio\n2) Status solo OPEN/DONE" },
+    M04: { explain: "Implementación es el chef: validaciones/determinaciones en ABAP.", exercise: "Haz 2 cosas:\n- default Status = OPEN\n- validate Title no vacío" },
+    M05: { explain: "Service Definition/Binding publica tu modelo como OData (mesero).", exercise: "Checklist:\n- Service Definition expone ZI_TASK\n- Service Binding OData publicado" },
+    M06: { explain: "Fiori Elements genera UI desde metadata/annotations (menú).", exercise: "Prueba: crear 3 tareas, editar status, abrir detalle." },
+    M07: { explain: "Mensajes claros = control de calidad. El usuario debe entender qué falló.", exercise: "Redacta 2 mensajes de validación claros." },
+    M08: { explain: "End-to-end mínimo: CDS + Behavior + Service + UI + validaciones.", exercise: "Checklist final: CRUD + servicio publicado + UI navegable + validaciones." }
   };
 
   // Utils
@@ -339,7 +294,6 @@ Prueba: crear una tarea y editar su status.`
     authMsg.textContent = txt || "";
     authMsg.style.color = isError ? "#fca5a5" : "#a7f3d0";
   }
-
   function setQuizMsg(txt, tone="muted"){
     quizMsg.textContent = txt || "";
     quizMsg.style.color =
@@ -352,7 +306,6 @@ Prueba: crear una tarea y editar su status.`
     const a = myAttempts.get(moduleCode);
     return a?.passed === true;
   }
-
   function moduleChecklistDone(moduleCode){
     return progressMap.get(moduleCode) === true;
   }
@@ -362,21 +315,16 @@ Prueba: crear una tarea y editar su status.`
     const done = modules.filter(m => moduleChecklistDone(m.code)).length;
     return pct(done, total);
   }
-
   function calcQuizPct(){
-    // % de módulos cuyo quiz está passed
     const total = modules.length;
     const done = modules.filter(m => isQuizPassed(m.code)).length;
     return pct(done, total);
   }
-
   function calcTotalPct(){
-    // 50% checklist + 50% quiz
     const c = calcChecklistPct();
     const q = calcQuizPct();
     return Math.round((c * 0.5) + (q * 0.5));
   }
-
   function renderTotalProgress(){
     const total = calcTotalPct();
     progressBar.style.width = total + "%";
@@ -386,7 +334,6 @@ Prueba: crear una tarea y editar su status.`
   function moduleStatusTag(moduleCode){
     const c = moduleChecklistDone(moduleCode);
     const q = isQuizPassed(moduleCode);
-
     if(c && q) return `<span class="tag ok">OK</span>`;
     if(c || q) return `<span class="tag warn">En progreso</span>`;
     return `<span class="tag">Pendiente</span>`;
@@ -398,7 +345,6 @@ Prueba: crear una tarea y editar su status.`
       const div = document.createElement("div");
       div.className = "mod";
       const checked = moduleChecklistDone(m.code);
-
       div.innerHTML = `
         <input type="checkbox" ${checked ? "checked" : ""} />
         <div style="flex:1;">
@@ -406,11 +352,9 @@ Prueba: crear una tarea y editar su status.`
           <span>Estimado: ${m.est_minutes} min · ${moduleStatusTag(m.code)}</span>
         </div>
       `;
-
       div.addEventListener("click", () => selectModule(m.code));
       modulesList.appendChild(div);
     });
-
     renderTotalProgress();
   }
 
@@ -434,14 +378,12 @@ Prueba: crear una tarea y editar su status.`
   async function ensureProfile(full_name, cohortTxt){
     const { data: { user } } = await supabase.auth.getUser();
     if(!user) return;
-
     const { error } = await supabase.from("profiles").insert({
       id: user.id,
       full_name,
       cohort: cohortTxt || null,
       role: "student"
     });
-
     if(error && !String(error.message).toLowerCase().includes("duplicate")){
       throw error;
     }
@@ -449,100 +391,72 @@ Prueba: crear una tarea y editar su status.`
 
   // Data loaders
   async function loadModules(){
-    const { data, error } = await supabase
-      .from("modules")
-      .select("*")
-      .order("order_no", { ascending: true });
+    const { data, error } = await supabase.from("modules").select("*").order("order_no", { ascending: true });
     if(error) throw error;
     modules = data || [];
   }
-
   async function loadMyProfile(){
     if(!currentUser) return null;
-
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", currentUser.id)
-      .maybeSingle();
+    const { data, error } = await supabase.from("profiles").select("*").eq("id", currentUser.id).maybeSingle();
     if(error) throw error;
     return data;
   }
-
   async function loadMyProgress(){
     progressMap.clear();
     if(!currentUser) return;
-
-    const { data, error } = await supabase
-      .from("progress")
-      .select("module_code, completed")
-      .eq("user_id", currentUser.id);
+    const { data, error } = await supabase.from("progress").select("module_code, completed").eq("user_id", currentUser.id);
     if(error) throw error;
-
     (data || []).forEach(r => progressMap.set(r.module_code, r.completed));
   }
-
   async function loadQuizQuestions(){
     quizQuestionsByModule.clear();
     const { data, error } = await supabase
       .from("quiz_questions")
-      .select("id, module_code, question, opt_a, opt_b, opt_c, order_no")
+      .select("id, module_code, question, opt_a, opt_b, opt_c, order_no")  // no correct_opt aquí
       .order("module_code", { ascending: true })
       .order("order_no", { ascending: true });
-
     if(error) throw error;
-
     (data || []).forEach(q => {
       const arr = quizQuestionsByModule.get(q.module_code) || [];
       arr.push(q);
       quizQuestionsByModule.set(q.module_code, arr);
     });
   }
-
   async function loadMyAttempts(){
     myAttempts.clear();
     if(!currentUser) return;
-
     const { data, error } = await supabase
       .from("quiz_attempts")
       .select("module_code, answers, score, total, passed")
       .eq("user_id", currentUser.id);
-
     if(error) throw error;
-
     (data || []).forEach(a => myAttempts.set(a.module_code, a));
   }
 
   // Checklist toggle
   async function toggleChecklist(moduleCode){
     if(!currentUser) return alert("Inicia sesión para guardar avance.");
-
     const newVal = !moduleChecklistDone(moduleCode);
     progressMap.set(moduleCode, newVal);
 
-    const { error } = await supabase
-      .from("progress")
-      .upsert({
-        user_id: currentUser.id,
-        module_code: moduleCode,
-        completed: newVal,
-        updated_at: new Date().toISOString()
-      });
+    const { error } = await supabase.from("progress").upsert({
+      user_id: currentUser.id,
+      module_code: moduleCode,
+      completed: newVal,
+      updated_at: new Date().toISOString()
+    });
 
     if(error){
       progressMap.set(moduleCode, !newVal);
       alert("No se pudo guardar checklist: " + error.message);
       return;
     }
-
     renderModules();
     renderDetailStatus(moduleCode);
   }
 
   function renderDetailStatus(moduleCode){
     const c = moduleChecklistDone(moduleCode);
-    const q = isQuizPassed(moduleCode);
-
     checkTag.className = "tag " + (c ? "ok" : "");
     checkTag.textContent = "Checklist: " + (c ? "completado" : "pendiente");
 
@@ -579,7 +493,6 @@ Prueba: crear una tarea y editar su status.`
       quizBox.appendChild(wrap);
     });
 
-    // apply selected state
     quizBox.querySelectorAll(".optBtn").forEach(btn => {
       const qid = btn.getAttribute("data-qid");
       const opt = btn.getAttribute("data-opt");
@@ -589,26 +502,23 @@ Prueba: crear una tarea y editar su status.`
         const qid2 = btn.getAttribute("data-qid");
         const opt2 = btn.getAttribute("data-opt");
         selectedAnswers[qid2] = opt2;
-
-        // refresh selection for same question
         quizBox.querySelectorAll(`.optBtn[data-qid="${qid2}"]`).forEach(b => b.classList.remove("sel"));
         btn.classList.add("sel");
       });
     });
 
-    // show last result
     if(attempt){
       setQuizMsg(`Último intento: ${attempt.score}/${attempt.total} (${attempt.passed ? "aprobado" : "no aprobado"})`, attempt.passed ? "ok" : "warn");
     }
   }
 
+  // ✅ Aprobado = 100%
   async function submitQuiz(moduleCode){
     if(!currentUser) return alert("Inicia sesión para calificar el quiz.");
 
     const qs = quizQuestionsByModule.get(moduleCode) || [];
     const total = qs.length;
 
-    // Validar que respondan todo
     for(const q of qs){
       if(!selectedAnswers[String(q.id)]){
         setQuizMsg("Responde todas las preguntas antes de calificar.", "warn");
@@ -616,10 +526,7 @@ Prueba: crear una tarea y editar su status.`
       }
     }
 
-    // Calificar en backend (sin exponer correctas al frontend):
-    // Para mantenerlo simple, hacemos la calificación aquí PERO sin traer correct_opt.
-    // Mejor práctica: usar una RPC o Edge Function.
-    // En esta versión didáctica, traemos correct_opt solo al calificar (mínimo riesgo en un curso).
+    // Traemos correct_opt SOLO para calificar (simple).
     const { data: keys, error } = await supabase
       .from("quiz_questions")
       .select("id, correct_opt")
@@ -637,7 +544,7 @@ Prueba: crear una tarea y editar su status.`
       if(selectedAnswers[qid] === correctMap.get(qid)) score++;
     }
 
-    const passed = total === 0 ? false : (score / total) >= 0.70;
+    const passed = (total > 0) && (score === total); // ✅ 100%
 
     const payload = {
       user_id: currentUser.id,
@@ -655,13 +562,12 @@ Prueba: crear una tarea y editar su status.`
       return;
     }
 
-    myAttempts.set(moduleCode, { module_code: moduleCode, answers: selectedAnswers, score, total, passed });
+    myAttempts.set(moduleCode, payload);
     renderModules();
     renderDetailStatus(moduleCode);
 
     setQuizMsg(`Resultado: ${score}/${total} (${passed ? "APROBADO ✅" : "Aún no 😅"})`, passed ? "ok" : "warn");
 
-    // Si es instructor, refrescar dashboard
     if(currentProfile?.role === "instructor"){
       await loadInstructorDashboard();
     }
@@ -675,7 +581,7 @@ Prueba: crear una tarea y editar su status.`
     const c = CONTENT[moduleCode] || { explain:"", exercise:"" };
 
     detailTitle.textContent = `${m.code} · ${m.title}`;
-    detailMeta.textContent = `Objetivo del módulo: entiende el concepto y valida con el mini-quiz.`;
+    detailMeta.textContent = `Objetivo: entiende el concepto + aprueba quiz (100%).`;
     detailBody.classList.remove("hide");
 
     detailExplain.textContent = c.explain || "";
@@ -685,11 +591,81 @@ Prueba: crear una tarea y editar su status.`
     renderDetailStatus(moduleCode);
     renderQuiz(moduleCode);
 
-    // scroll suave
     location.hash = "#detalle";
   }
 
-  // Instructor dashboard
+  // ------- Instructor: detalle de fallos -------
+  function optLabel(opt){ return opt ? opt.toUpperCase() : "(sin responder)"; }
+
+  async function buildFailureReportForUser(userId){
+    // Traer intentos del usuario
+    const { data: attempts, error: e1 } = await supabase
+      .from("quiz_attempts")
+      .select("module_code, answers, score, total, passed")
+      .eq("user_id", userId);
+
+    if(e1) throw e1;
+
+    // Traer banco completo con correct_opt (para comparar)
+    const { data: bank, error: e2 } = await supabase
+      .from("quiz_questions")
+      .select("id, module_code, question, opt_a, opt_b, opt_c, correct_opt, order_no")
+      .order("module_code", { ascending: true })
+      .order("order_no", { ascending: true });
+
+    if(e2) throw e2;
+
+    const questionsByModule = new Map();
+    (bank || []).forEach(q => {
+      const arr = questionsByModule.get(q.module_code) || [];
+      arr.push(q);
+      questionsByModule.set(q.module_code, arr);
+    });
+
+    const attemptsMap = new Map((attempts || []).map(a => [a.module_code, a]));
+    const report = [];
+
+    for(const m of modules){
+      const a = attemptsMap.get(m.code);
+      const qlist = questionsByModule.get(m.code) || [];
+
+      if(!a){
+        report.push({ module: m.code, title: m.title, status: "sin intento", fails: qlist.map(q => ({
+          question: q.question,
+          chosen: null,
+          correct: q.correct_opt,
+          explain: `Correcta: ${q.correct_opt}`
+        }))});
+        continue;
+      }
+
+      const answers = a.answers || {};
+      const fails = [];
+      for(const q of qlist){
+        const chosen = answers[String(q.id)] || null;
+        const correct = q.correct_opt;
+        if(chosen !== correct){
+          fails.push({
+            question: q.question,
+            chosen,
+            correct,
+            explain:
+              `Respondió: ${optLabel(chosen)} · Correcta: ${optLabel(correct)}`
+          });
+        }
+      }
+
+      report.push({
+        module: m.code,
+        title: m.title,
+        status: a.passed ? "aprobado" : "no aprobado",
+        fails
+      });
+    }
+
+    return report;
+  }
+
   async function loadInstructorDashboard(){
     instructorTable.innerHTML = "";
 
@@ -711,18 +687,14 @@ Prueba: crear una tarea y editar su status.`
 
     const totalMods = modules.length;
 
-    const checklistByUser = new Map(); // user_id -> count completed
-    (progressRows || []).forEach(r => {
-      if(r.completed) checklistByUser.set(r.user_id, (checklistByUser.get(r.user_id)||0) + 1);
-    });
+    const checklistByUser = new Map();
+    (progressRows || []).forEach(r => { if(r.completed) checklistByUser.set(r.user_id, (checklistByUser.get(r.user_id)||0) + 1); });
 
-    const quizByUser = new Map(); // user_id -> count passed
-    (attemptsRows || []).forEach(a => {
-      if(a.passed) quizByUser.set(a.user_id, (quizByUser.get(a.user_id)||0) + 1);
-    });
+    const quizByUser = new Map();
+    (attemptsRows || []).forEach(a => { if(a.passed) quizByUser.set(a.user_id, (quizByUser.get(a.user_id)||0) + 1); });
 
-    (profiles || []).forEach(p => {
-      if(p.role !== "student") return;
+    for(const p of (profiles || [])){
+      if(p.role !== "student") continue;
 
       const cDone = checklistByUser.get(p.id) || 0;
       const qDone = quizByUser.get(p.id) || 0;
@@ -732,15 +704,71 @@ Prueba: crear una tarea y editar su status.`
       const total = Math.round((cPct*0.5) + (qPct*0.5));
 
       const tr = document.createElement("tr");
+
+      const detailsId = `d_${p.id.replaceAll("-","")}`;
       tr.innerHTML = `
         <td>${p.full_name}</td>
         <td>${p.cohort || ""}</td>
         <td><span class="tag ${cPct===100 ? "ok":"warn"}">${cPct}%</span> <span class="small">(${cDone}/${totalMods})</span></td>
         <td><span class="tag ${qPct===100 ? "ok":"warn"}">${qPct}%</span> <span class="small">(${qDone}/${totalMods})</span></td>
         <td><span class="tag ${total===100 ? "ok":"warn"}">${total}%</span></td>
+        <td>
+          <button class="btn" data-user="${p.id}" data-target="${detailsId}">Ver fallos</button>
+          <div id="${detailsId}" class="hide" style="margin-top:10px;"></div>
+        </td>
       `;
+
       instructorTable.appendChild(tr);
-    });
+
+      // bind
+      tr.querySelector("button").addEventListener("click", async (e) => {
+        const userId = e.target.getAttribute("data-user");
+        const targetId = e.target.getAttribute("data-target");
+        const box = document.getElementById(targetId);
+
+        if(!box.classList.contains("hide")){
+          box.classList.add("hide");
+          e.target.textContent = "Ver fallos";
+          return;
+        }
+
+        e.target.textContent = "Cargando...";
+        box.classList.remove("hide");
+        box.innerHTML = "";
+
+        try{
+          const report = await buildFailureReportForUser(userId);
+
+          const details = document.createElement("div");
+          details.innerHTML = report.map(r => {
+            const failCount = r.fails.length;
+            const statusTag =
+              r.status === "aprobado" ? `<span class="tag ok">Aprobado</span>` :
+              r.status === "sin intento" ? `<span class="tag bad">Sin intento</span>` :
+              `<span class="tag warn">No aprobado</span>`;
+
+            return `
+              <details style="margin-top:10px;">
+                <summary>${r.module} · ${r.title} — ${statusTag} · Fallos: ${failCount}</summary>
+                ${failCount === 0 ? `<p class="small">Sin fallos. Perfecto.</p>` : ""}
+                ${r.fails.map(f => `
+                  <div class="failItem">
+                    <div><b>${f.question}</b></div>
+                    <div class="small">${f.explain}</div>
+                  </div>
+                `).join("")}
+              </details>
+            `;
+          }).join("");
+
+          box.appendChild(details);
+          e.target.textContent = "Ocultar";
+        } catch(err){
+          box.innerHTML = `<p class="small" style="color:#fecdd3;">Error: ${err.message || err}</p>`;
+          e.target.textContent = "Ver fallos";
+        }
+      });
+    }
   }
 
   // Buttons
@@ -788,11 +816,10 @@ Prueba: crear una tarea y editar su status.`
     if(!currentUser) return;
     if(!confirm("¿Seguro? Esto borra checklist + quiz.")) return;
 
-    const e1 = await supabase.from("progress").delete().eq("user_id", currentUser.id);
-    const e2 = await supabase.from("quiz_attempts").delete().eq("user_id", currentUser.id);
-
-    if(e1.error) return alert(e1.error.message);
-    if(e2.error) return alert(e2.error.message);
+    const r1 = await supabase.from("progress").delete().eq("user_id", currentUser.id);
+    const r2 = await supabase.from("quiz_attempts").delete().eq("user_id", currentUser.id);
+    if(r1.error) return alert(r1.error.message);
+    if(r2.error) return alert(r2.error.message);
 
     progressMap.clear();
     myAttempts.clear();
@@ -836,7 +863,6 @@ Prueba: crear una tarea y editar su status.`
     setAuthUI();
     renderModules();
 
-    // Si había un módulo seleccionado, re-render detalle
     if(selectedModule){
       selectModule(selectedModule);
     }
