@@ -274,6 +274,22 @@
 
   const instructorTable = el("instructorTable");
 
+  const BTN_SIGNOUT_DEFAULT = el("btnSignOut")?.textContent || "Cerrar sesion";
+  const BTN_RESET_DEFAULT = el("btnResetAll")?.textContent || "Reiniciar TODO";
+
+  function setSessionActionButtons(disabled, signOutText = null, resetText = null){
+    const btnOut = el("btnSignOut");
+    const btnReset = el("btnResetAll");
+    if(btnOut){
+      btnOut.disabled = disabled;
+      btnOut.textContent = signOutText ?? BTN_SIGNOUT_DEFAULT;
+    }
+    if(btnReset){
+      btnReset.disabled = disabled;
+      btnReset.textContent = resetText ?? BTN_RESET_DEFAULT;
+    }
+  }
+
   let currentUser = null;
   let currentProfile = null;
 
@@ -286,8 +302,10 @@
   let selectedAnswers = {};            // question_id -> "A|B|C"
   let refreshing = false;              // guard: evita ejecuciones concurrentes de refreshData
   let refreshQueued = false;           // cola de refresh si llega otro evento mientras refresca
+  let refreshVersion = 0;              // invalida refreshes en vuelo cuando cambia la sesion
   let signingOut = false;              // evita doble click / carreras al cerrar sesi?n
   let resettingAll = false;            // evita doble click / carreras al reiniciar progreso
+  let signOutBarrierUntil = 0;         // ignora SIGNED_IN espurio justo tras cerrar sesion
 
   const CONTENT = {
     M01: {
@@ -789,12 +807,18 @@
 
   // ✅ IMPORTANTE: En vez de getUser(), usamos SIEMPRE session.user cuando exista
   // Fix: guard de concurrencia + manejo granular de errores por paso
-  async function refreshData(){
+    async function refreshData(){
     if(refreshing){
       refreshQueued = true;
       return;
     }
     refreshing = true;
+
+    const myRefreshVersion = refreshVersion;
+    const userAtStart = currentUser?.id || null;
+    const isStaleRefresh = () =>
+      myRefreshVersion !== refreshVersion ||
+      userAtStart !== (currentUser?.id || null);
 
     try{
       if(!currentUser){
@@ -812,24 +836,28 @@
 
       // 1) Perfil (no crítico: si falla, continúa con rol null)
       try{
-        currentProfile = await withTimeout(loadMyProfile(), 12000, "load profile");
+        currentProfile = await withTimeout(loadMyProfile(), 8000, "load profile");
       } catch(e){
         console.error("[refreshData] loadMyProfile:", e?.message || e);
         currentProfile = null;
       }
+      if(isStaleRefresh()) return;
 
       // Actualiza la UI de auth antes de mostrar cualquier error
       setAuthUI();
 
       // 2) Módulos del curso (crítico: sin módulos no hay nada que mostrar)
       try{
-        await withTimeout(loadModules(), 15000, "load modules");
+        await withTimeout(loadModules(), 7000, "load modules");
       } catch(e){
+        if(isStaleRefresh() || signingOut || !currentUser) return;
         setUserMsg("No se pudieron cargar los módulos: " + (e?.message || e), true);
         return;
       }
+      if(isStaleRefresh()) return;
 
       if(modules.length === 0){
+        if(!currentUser) return;
         setUserMsg(
           "No se encontraron módulos. Verifica en Supabase: " +
           "¿la tabla 'modules' tiene filas? ¿RLS permite SELECT a usuarios autenticados?",
@@ -845,6 +873,7 @@
       } catch(e){
         console.error("[refreshData] loadQuizQuestions:", e?.message || e);
       }
+      if(isStaleRefresh()) return;
 
       // 4) Progreso del usuario (no crítico: muestra 0% si falla)
       try{
@@ -852,6 +881,7 @@
       } catch(e){
         console.error("[refreshData] loadMyProgress:", e?.message || e);
       }
+      if(isStaleRefresh()) return;
 
       // 5) Intentos de quiz (no crítico)
       try{
@@ -859,6 +889,7 @@
       } catch(e){
         console.error("[refreshData] loadMyAttempts:", e?.message || e);
       }
+      if(isStaleRefresh()) return;
 
       renderModules();
 
@@ -875,7 +906,7 @@
       }
     } finally {
       refreshing = false;
-      if(refreshQueued){
+      if(refreshQueued && !signingOut){
         refreshQueued = false;
         await refreshData();
       }
@@ -901,6 +932,7 @@
     lock(btn, true);
     clearAuthAreaMsgs();
     try{
+      signOutBarrierUntil = 0;
       const nm = fullName.value.trim();
       const ch = cohort.value.trim();
       const em = email.value.trim();
@@ -951,6 +983,7 @@
     lock(btn, true);
     clearAuthAreaMsgs();
     try{
+      signOutBarrierUntil = 0;
       const em = email.value.trim();
       const pw = password.value.trim();
       if(!em || !pw) return setAuthMsg("Email y contraseña son obligatorios.", true);
@@ -973,43 +1006,55 @@
 
   el("btnSignOut").addEventListener("click", async () => {
     if(signingOut) return;
-    signingOut = true;
-
-    const btn = el("btnSignOut");
-    const prevTxt = btn.textContent;
-    btn.disabled = true;
-    btn.textContent = "Cerrando...";
-    clearAuthAreaMsgs();
-
-    try{
-      const { error } = await withTimeout(supabase.auth.signOut({ scope: "local" }), 10000, "signout");
-      if(error) return setUserMsg("No pude cerrar sesion: " + error.message, true);
-
-      currentUser = null;
-      currentProfile = null;
-      selectedModule = null;
-      detailBody.classList.add("hide");
-      setAuthUI();
-      renderModules();
-      setAuthMsg("Sesion cerrada.", false);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = prevTxt;
-      signingOut = false;
+    if(resettingAll){
+      setUserMsg("Espera a que termine Reiniciar TODO.", true);
+      return;
     }
+    signingOut = true;
+    signOutBarrierUntil = Date.now() + 8000;
+    refreshVersion++;
+    refreshQueued = false;
+
+    clearAuthAreaMsgs();
+    setSessionActionButtons(true, "Cerrando...", BTN_RESET_DEFAULT);
+
+    let signoutErr = null;
+    try{
+      const { error } = await withTimeout(supabase.auth.signOut({ scope: "local" }), 4000, "signout");
+      if(error) signoutErr = new Error(error.message || "Signout failed");
+    } catch(err){
+      signoutErr = err;
+      console.error("[signOut]", err?.message || err);
+    }
+
+    currentUser = null;
+    currentProfile = null;
+    selectedModule = null;
+    selectedAnswers = {};
+    detailBody.classList.add("hide");
+    setQuizMsg("");
+    setAuthUI();
+    renderModules();
+
+    if(signoutErr){
+      setAuthMsg("Sesion cerrada localmente (con advertencia de red).", false);
+    } else {
+      setAuthMsg("Sesion cerrada.", false);
+    }
+
+    setSessionActionButtons(false);
+    signingOut = false;
   });
 
   el("btnResetAll").addEventListener("click", async () => {
     if(!currentUser) return;
     if(resettingAll) return;
+    if(signingOut) return;
     if(!confirm("Seguro? Esto borra checklist + quiz.")) return;
 
     resettingAll = true;
-    const btn = el("btnResetAll");
-    const prevTxt = btn.textContent;
-    btn.disabled = true;
-    btn.textContent = "Reiniciando...";
     clearAuthAreaMsgs();
+    setSessionActionButtons(true, BTN_SIGNOUT_DEFAULT, "Reiniciando...");
 
     try{
       const [r1, r2] = await withTimeout(Promise.all([
@@ -1025,12 +1070,14 @@
       selectedAnswers = {};
       selectedModule = null;
       detailBody.classList.add("hide");
+      setQuizMsg("");
       renderModules();
       setUserMsg("Reinicio completo.", false);
       await refreshData();
+    } catch(err){
+      setUserMsg("No se pudo reiniciar: " + (err?.message || err), true);
     } finally {
-      btn.disabled = false;
-      btn.textContent = prevTxt;
+      setSessionActionButtons(false);
       resettingAll = false;
     }
   });
@@ -1050,6 +1097,13 @@
   // No se necesita IIFE con getSession() — eso causaba AbortError (lock conflict).
   supabase.auth.onAuthStateChange(async (event, session) => {
     console.log("Auth event:", event);
+
+    if(event === "SIGNED_IN" && Date.now() < signOutBarrierUntil){
+      console.warn("Auth event ignored during signout barrier:", event);
+      return;
+    }
+
+    refreshVersion++;
     currentUser = session?.user || null;
 
     if(event === "SIGNED_OUT") {
@@ -1058,8 +1112,15 @@
       detailBody.classList.add("hide");
     }
 
-    await refreshData();
+    try{
+      await refreshData();
+    } catch(err){
+      console.error("[onAuthStateChange]", err?.message || err);
+    }
   });
 </script>
 </body>
 </html>
+
+
+
