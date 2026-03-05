@@ -101,7 +101,6 @@
   <div class="grid" style="margin-top:16px;">
     <div class="card">
       <h2>Registro / Acceso</h2>
-      <p class="small">El profile se crea por trigger. Aquí mostramos errores (sin silencios).</p>
 
       <div id="authBox">
         <label>Nombre completo</label>
@@ -286,6 +285,9 @@
   let selectedModule = null;
   let selectedAnswers = {};            // question_id -> "A|B|C"
   let refreshing = false;              // guard: evita ejecuciones concurrentes de refreshData
+  let refreshQueued = false;           // cola de refresh si llega otro evento mientras refresca
+  let signingOut = false;              // evita doble click / carreras al cerrar sesi?n
+  let resettingAll = false;            // evita doble click / carreras al reiniciar progreso
 
   const CONTENT = {
     M01: {
@@ -341,6 +343,10 @@
   }
   const setAuthMsg = (m, err=false) => showBox(authMsgBox, m, err ? "bad" : "ok");
   const setUserMsg = (m, err=false) => showBox(userMsgBox, m, err ? "bad" : "ok");
+  const clearAuthAreaMsgs = () => {
+    setAuthMsg("", false);
+    setUserMsg("", false);
+  };
 
   function setQuizMsg(msg, tone="muted"){
     quizMsg.textContent = msg || "";
@@ -354,6 +360,10 @@
     const logged = !!currentUser;
     authBox.classList.toggle("hide", logged);
     userBox.classList.toggle("hide", !logged);
+
+    // Clear stale toast from the hidden auth area box.
+    if(logged) setAuthMsg("", false);
+    else setUserMsg("", false);
 
     sessionPill.textContent = logged ? "Sesión activa" : "Sin sesión";
 
@@ -766,7 +776,10 @@
   // ✅ IMPORTANTE: En vez de getUser(), usamos SIEMPRE session.user cuando exista
   // Fix: guard de concurrencia + manejo granular de errores por paso
   async function refreshData(){
-    if(refreshing) return;
+    if(refreshing){
+      refreshQueued = true;
+      return;
+    }
     refreshing = true;
 
     try{
@@ -776,6 +789,8 @@
         quizQuestionsByModule.clear();
         progressMap.clear();
         myAttempts.clear();
+        selectedAnswers = {};
+        setQuizMsg("");
         setAuthUI();
         renderModules();
         return;
@@ -846,6 +861,10 @@
       }
     } finally {
       refreshing = false;
+      if(refreshQueued){
+        refreshQueued = false;
+        await refreshData();
+      }
     }
   }
 
@@ -866,7 +885,7 @@
   el("btnSignUp").addEventListener("click", async () => {
     const btn = el("btnSignUp");
     lock(btn, true);
-    setAuthMsg("", false);
+    clearAuthAreaMsgs();
     try{
       const nm = fullName.value.trim();
       const ch = cohort.value.trim();
@@ -916,7 +935,7 @@
   el("btnSignIn").addEventListener("click", async () => {
     const btn = el("btnSignIn");
     lock(btn, true);
-    setAuthMsg("", false);
+    clearAuthAreaMsgs();
     try{
       const em = email.value.trim();
       const pw = password.value.trim();
@@ -939,34 +958,67 @@
   });
 
   el("btnSignOut").addEventListener("click", async () => {
-    setUserMsg("", false);
-    const { error } = await supabase.auth.signOut();
-    if(error) return setUserMsg("No pude cerrar sesión: " + error.message, true);
-    currentUser = null;
-    currentProfile = null;
-    selectedModule = null;
-    detailBody.classList.add("hide");
-    setUserMsg("Sesión cerrada ✅", false);
-    setAuthUI();
-    renderModules();
+    if(signingOut) return;
+    signingOut = true;
+
+    const btn = el("btnSignOut");
+    const prevTxt = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "Cerrando...";
+    clearAuthAreaMsgs();
+
+    try{
+      const { error } = await supabase.auth.signOut({ scope: "local" });
+      if(error) return setUserMsg("No pude cerrar sesion: " + error.message, true);
+
+      currentUser = null;
+      currentProfile = null;
+      selectedModule = null;
+      detailBody.classList.add("hide");
+      setAuthUI();
+      renderModules();
+      setAuthMsg("Sesion cerrada.", false);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = prevTxt;
+      signingOut = false;
+    }
   });
 
   el("btnResetAll").addEventListener("click", async () => {
     if(!currentUser) return;
-    if(!confirm("¿Seguro? Esto borra checklist + quiz.")) return;
+    if(resettingAll) return;
+    if(!confirm("Seguro? Esto borra checklist + quiz.")) return;
 
-    const r1 = await supabase.from("progress").delete().eq("user_id", currentUser.id);
-    const r2 = await supabase.from("quiz_attempts").delete().eq("user_id", currentUser.id);
-    if(r1.error) return setUserMsg(r1.error.message, true);
-    if(r2.error) return setUserMsg(r2.error.message, true);
+    resettingAll = true;
+    const btn = el("btnResetAll");
+    const prevTxt = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "Reiniciando...";
+    clearAuthAreaMsgs();
 
-    progressMap.clear();
-    myAttempts.clear();
-    selectedModule = null;
-    detailBody.classList.add("hide");
-    renderModules();
-    setUserMsg("Reinicio completo ✅", false);
-    await refreshData();
+    try{
+      const [r1, r2] = await Promise.all([
+        supabase.from("progress").delete().eq("user_id", currentUser.id),
+        supabase.from("quiz_attempts").delete().eq("user_id", currentUser.id)
+      ]);
+
+      const errs = [r1.error?.message, r2.error?.message].filter(Boolean);
+      if(errs.length) return setUserMsg("No se pudo reiniciar: " + errs.join(" | "), true);
+
+      progressMap.clear();
+      myAttempts.clear();
+      selectedAnswers = {};
+      selectedModule = null;
+      detailBody.classList.add("hide");
+      renderModules();
+      setUserMsg("Reinicio completo.", false);
+      await refreshData();
+    } finally {
+      btn.disabled = false;
+      btn.textContent = prevTxt;
+      resettingAll = false;
+    }
   });
 
   btnToggleChecklist.addEventListener("click", async () => {
@@ -985,6 +1037,13 @@
   supabase.auth.onAuthStateChange(async (event, session) => {
     console.log("Auth event:", event);
     currentUser = session?.user || null;
+
+    if(event === "SIGNED_OUT") {
+      currentProfile = null;
+      selectedModule = null;
+      detailBody.classList.add("hide");
+    }
+
     await refreshData();
   });
 </script>
