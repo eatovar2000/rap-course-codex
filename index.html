@@ -403,6 +403,37 @@
     }
   }
 
+  function isRecoverableAuthError(err){
+    const msg = String(err?.message || err || "").toLowerCase();
+    return msg.includes("jwt") || msg.includes("token") || msg.includes("session");
+  }
+
+  async function recoverSession(reason){
+    if(signingOut) return false;
+    try{
+      const { data, error } = await withTimeout(supabase.auth.refreshSession(), 7000, "refresh session");
+      if(error || !data?.session?.user) return false;
+      currentUser = data.session.user;
+      signOutBarrierUntil = 0;
+      refreshVersion++;
+      console.warn("[auth-recovery]", reason);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async function runWithSessionRecovery(label, work){
+    try{
+      return await work();
+    } catch(err){
+      if(!currentUser || signingOut || !isRecoverableAuthError(err)) throw err;
+      const recovered = await recoverSession(label);
+      if(!recovered) throw err;
+      return await work();
+    }
+  }
+
   function setQuizMsg(msg, tone="muted"){
     quizMsg.textContent = msg || "";
     quizMsg.style.color =
@@ -859,7 +890,7 @@
 
       // 1) Perfil (no crítico: si falla, continúa con rol null)
       try{
-        currentProfile = await withTimeout(loadMyProfile(), 8000, "load profile");
+        currentProfile = await withTimeout(runWithSessionRecovery("load profile", () => loadMyProfile()), 9000, "load profile");
       } catch(e){
         console.error("[refreshData] loadMyProfile:", e?.message || e);
         currentProfile = null;
@@ -871,7 +902,7 @@
 
       // 2) Módulos del curso (crítico: sin módulos no hay nada que mostrar)
       try{
-        await withTimeout(loadModules(), 7000, "load modules");
+        await withTimeout(runWithSessionRecovery("load modules", () => loadModules()), 9000, "load modules");
       } catch(e){
         if(isStaleRefresh() || signingOut || !currentUser) return;
         setUserMsg("No se pudieron cargar los módulos: " + (e?.message || e), true);
@@ -892,7 +923,7 @@
 
       // 3) Preguntas del quiz (no crítico: quiz queda vacío si falla)
       try{
-        await withTimeout(loadQuizQuestions(), 15000, "load quiz questions");
+        await withTimeout(runWithSessionRecovery("load quiz questions", () => loadQuizQuestions()), 16000, "load quiz questions");
       } catch(e){
         console.error("[refreshData] loadQuizQuestions:", e?.message || e);
       }
@@ -900,7 +931,7 @@
 
       // 4) Progreso del usuario (no crítico: muestra 0% si falla)
       try{
-        await withTimeout(loadMyProgress(), 12000, "load progress");
+        await withTimeout(runWithSessionRecovery("load progress", () => loadMyProgress()), 13000, "load progress");
       } catch(e){
         console.error("[refreshData] loadMyProgress:", e?.message || e);
       }
@@ -908,7 +939,7 @@
 
       // 5) Intentos de quiz (no crítico)
       try{
-        await withTimeout(loadMyAttempts(), 12000, "load attempts");
+        await withTimeout(runWithSessionRecovery("load attempts", () => loadMyAttempts()), 13000, "load attempts");
       } catch(e){
         console.error("[refreshData] loadMyAttempts:", e?.message || e);
       }
@@ -922,7 +953,7 @@
 
       if(currentProfile?.role === "instructor"){
         try{
-          await withTimeout(loadInstructorDashboard(), 15000, "load instructor dashboard");
+          await withTimeout(runWithSessionRecovery("load instructor dashboard", () => loadInstructorDashboard()), 16000, "load instructor dashboard");
         } catch(e){
           console.error("[refreshData] loadInstructorDashboard:", e?.message || e);
         }
@@ -1126,6 +1157,19 @@
       return;
     }
 
+    if(event === "TOKEN_REFRESHED"){
+      if(session?.user) currentUser = session.user;
+      return;
+    }
+
+    if(event === "SIGNED_OUT" && !signingOut){
+      const recovered = await recoverSession("transient signed_out");
+      if(recovered){
+        await refreshData();
+        return;
+      }
+    }
+
     refreshVersion++;
     currentUser = session?.user || null;
 
@@ -1144,10 +1188,3 @@
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
