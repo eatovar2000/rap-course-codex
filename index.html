@@ -323,6 +323,12 @@
   };
 
   const pct = (n, d) => (d === 0 ? 0 : Math.round((n / d) * 100));
+  const esc = (v) => String(v ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 
   function showBox(boxEl, msg, tone="ok"){
     if(!msg){ boxEl.classList.add("hide"); boxEl.textContent=""; return; }
@@ -397,8 +403,8 @@
       div.innerHTML = `
         <input type="checkbox" ${moduleChecklistDone(m.code) ? "checked" : ""} />
         <div style="flex:1;">
-          <b>${m.code} · ${m.title}</b>
-          <span>Estimado: ${m.est_minutes} min · ${moduleStatusTag(m.code)}</span>
+          <b>${esc(m.code)} - ${esc(m.title)}</b>
+          <span>Estimado: ${esc(m.est_minutes)} min - ${moduleStatusTag(m.code)}</span>
         </div>
       `;
       div.addEventListener("click", () => selectModule(m.code));
@@ -497,11 +503,11 @@
       const wrap = document.createElement("div");
       wrap.className = "quizQ";
       wrap.innerHTML = `
-        <div><b>${q.question}</b></div>
+        <div><b>${esc(q.question)}</b></div>
         <div class="optRow">
-          <button class="optBtn" data-qid="${q.id}" data-opt="A">A) ${q.opt_a}</button>
-          <button class="optBtn" data-qid="${q.id}" data-opt="B">B) ${q.opt_b}</button>
-          <button class="optBtn" data-qid="${q.id}" data-opt="C">C) ${q.opt_c}</button>
+          <button class="optBtn" data-qid="${q.id}" data-opt="A">A) ${esc(q.opt_a)}</button>
+          <button class="optBtn" data-qid="${q.id}" data-opt="B">B) ${esc(q.opt_b)}</button>
+          <button class="optBtn" data-qid="${q.id}" data-opt="C">C) ${esc(q.opt_c)}</button>
         </div>
       `;
       quizBox.appendChild(wrap);
@@ -602,6 +608,10 @@
   function optLabel(opt){ return opt ? opt.toUpperCase() : "(sin responder)"; }
 
   async function buildFailureReportForUser(userId){
+    if(currentProfile?.role !== "instructor"){
+      throw new Error("Acceso denegado al reporte de fallos.");
+    }
+
     const { data: attempts, error: e1 } = await supabase
       .from("quiz_attempts")
       .select("module_code, answers, score, total, passed")
@@ -650,6 +660,11 @@
   }
 
   async function loadInstructorDashboard(){
+    if(currentProfile?.role !== "instructor"){
+      instructorTable.innerHTML = "";
+      return;
+    }
+
     instructorTable.innerHTML = "";
 
     const { data: profiles, error: e1 } = await supabase
@@ -687,16 +702,17 @@
       const total = Math.round((cPct*0.5) + (qPct*0.5));
 
       const tr = document.createElement("tr");
-      const detailsId = `d_${p.id.replaceAll("-","")}`;
+      const safeUserId = String(p.id || "").replace(/[^a-zA-Z0-9_-]/g, "");
+      const detailsId = `d_${safeUserId.replaceAll("-","")}`;
 
       tr.innerHTML = `
-        <td>${p.full_name}</td>
-        <td>${p.cohort || ""}</td>
+        <td>${esc(p.full_name)}</td>
+        <td>${esc(p.cohort || "")}</td>
         <td><span class="tag ${cPct===100 ? "ok":"warn"}">${cPct}%</span> <span class="small">(${cDone}/${totalMods})</span></td>
         <td><span class="tag ${qPct===100 ? "ok":"warn"}">${qPct}%</span> <span class="small">(${qDone}/${totalMods})</span></td>
         <td><span class="tag ${total===100 ? "ok":"warn"}">${total}%</span></td>
         <td>
-          <button class="btn" data-user="${p.id}" data-target="${detailsId}">Ver fallos</button>
+          <button class="btn" data-user="${safeUserId}" data-target="${detailsId}">Ver fallos</button>
           <div id="${detailsId}" class="hide" style="margin-top:10px;"></div>
         </td>
       `;
@@ -727,12 +743,12 @@
 
             return `
               <details style="margin-top:10px;">
-                <summary>${r.module} · ${r.title} — ${statusTag} · Fallos: ${r.fails.length}</summary>
+                <summary>${esc(r.module)} - ${esc(r.title)} - ${statusTag} - Fallos: ${r.fails.length}</summary>
                 ${r.fails.length === 0 ? `<p class="small">Sin fallos. Perfecto.</p>` : ""}
                 ${r.fails.map(f => `
                   <div class="failItem">
-                    <div><b>${f.question}</b></div>
-                    <div class="small">Respondió: ${optLabel(f.chosen)} · Correcta: ${optLabel(f.correct)}</div>
+                    <div><b>${esc(f.question)}</b></div>
+                    <div class="small">Respondió: ${esc(optLabel(f.chosen))} · Correcta: ${esc(optLabel(f.correct))}</div>
                   </div>
                 `).join("")}
               </details>
@@ -740,7 +756,7 @@
           }).join("");
           e.target.textContent = "Ocultar";
         } catch(err){
-          box.innerHTML = `<p class="small" style="color:#fecdd3;">Error: ${err.message || err}</p>`;
+          box.innerHTML = `<p class="small" style="color:#fecdd3;">Error: ${esc(err.message || err)}</p>`;
           e.target.textContent = "Ver fallos";
         }
       });
@@ -861,15 +877,14 @@
       if(!em || !pw) return setAuthMsg("Email y contraseña son obligatorios.", true);
 
       setAuthMsg("Creando cuenta...", false);
-
-      // Determinar rol según checkbox e instructor code
+      // Determinar rol seg?n checkbox e instructor code
       let role = 'student';
       const chkInst = document.getElementById('chkInstructor');
       if (chkInst && chkInst.checked) {
         const code = document.getElementById('instructorCode').value.trim();
         if (code !== 'RAP2024INST') {
           lock(btn, false);
-          return setAuthMsg('Código de instructor incorrecto.', true);
+          return setAuthMsg('C?digo de instructor incorrecto.', true);
         }
         role = 'instructor';
       }
