@@ -348,6 +348,20 @@
     setUserMsg("", false);
   };
 
+  async function withTimeout(promise, ms, label){
+    let timer;
+    try{
+      return await Promise.race([
+        promise,
+        new Promise((_, reject) => {
+          timer = setTimeout(() => reject(new Error("Timeout: " + label)), ms);
+        })
+      ]);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   function setQuizMsg(msg, tone="muted"){
     quizMsg.textContent = msg || "";
     quizMsg.style.color =
@@ -798,7 +812,7 @@
 
       // 1) Perfil (no crítico: si falla, continúa con rol null)
       try{
-        currentProfile = await loadMyProfile();
+        currentProfile = await withTimeout(loadMyProfile(), 12000, "load profile");
       } catch(e){
         console.error("[refreshData] loadMyProfile:", e?.message || e);
         currentProfile = null;
@@ -809,7 +823,7 @@
 
       // 2) Módulos del curso (crítico: sin módulos no hay nada que mostrar)
       try{
-        await loadModules();
+        await withTimeout(loadModules(), 15000, "load modules");
       } catch(e){
         setUserMsg("No se pudieron cargar los módulos: " + (e?.message || e), true);
         return;
@@ -827,21 +841,21 @@
 
       // 3) Preguntas del quiz (no crítico: quiz queda vacío si falla)
       try{
-        await loadQuizQuestions();
+        await withTimeout(loadQuizQuestions(), 15000, "load quiz questions");
       } catch(e){
         console.error("[refreshData] loadQuizQuestions:", e?.message || e);
       }
 
       // 4) Progreso del usuario (no crítico: muestra 0% si falla)
       try{
-        await loadMyProgress();
+        await withTimeout(loadMyProgress(), 12000, "load progress");
       } catch(e){
         console.error("[refreshData] loadMyProgress:", e?.message || e);
       }
 
       // 5) Intentos de quiz (no crítico)
       try{
-        await loadMyAttempts();
+        await withTimeout(loadMyAttempts(), 12000, "load attempts");
       } catch(e){
         console.error("[refreshData] loadMyAttempts:", e?.message || e);
       }
@@ -854,7 +868,7 @@
 
       if(currentProfile?.role === "instructor"){
         try{
-          await loadInstructorDashboard();
+          await withTimeout(loadInstructorDashboard(), 15000, "load instructor dashboard");
         } catch(e){
           console.error("[refreshData] loadInstructorDashboard:", e?.message || e);
         }
@@ -908,16 +922,16 @@
         role = 'instructor';
       }
 
-      const { error } = await supabase.auth.signUp({
+      const { error } = await withTimeout(supabase.auth.signUp({
         email: em,
         password: pw,
         options: { data: { full_name: nm, cohort: ch || null, role } }
-      });
+      }), 15000, "signup");
 
       if(error) return setAuthMsg("No se pudo crear cuenta: " + error.message, true);
 
       setAuthMsg("Cuenta creada. Iniciando sesión...", false);
-      const r2 = await supabase.auth.signInWithPassword({ email: em, password: pw });
+      const r2 = await withTimeout(supabase.auth.signInWithPassword({ email: em, password: pw }), 15000, "auto login after signup");
       if(r2.error) return setAuthMsg("Login falló: " + r2.error.message, true);
 
       // ✅ AQUÍ está el fix: tomamos el usuario directamente del login
@@ -942,7 +956,7 @@
       if(!em || !pw) return setAuthMsg("Email y contraseña son obligatorios.", true);
 
       setAuthMsg("Iniciando sesión...", false);
-      const { data, error } = await supabase.auth.signInWithPassword({ email: em, password: pw });
+      const { data, error } = await withTimeout(supabase.auth.signInWithPassword({ email: em, password: pw }), 15000, "signin");
       if(error) return setAuthMsg("Login falló: " + error.message, true);
 
       // ✅ FIX: usuario desde data.user
@@ -968,7 +982,7 @@
     clearAuthAreaMsgs();
 
     try{
-      const { error } = await supabase.auth.signOut({ scope: "local" });
+      const { error } = await withTimeout(supabase.auth.signOut({ scope: "local" }), 10000, "signout");
       if(error) return setUserMsg("No pude cerrar sesion: " + error.message, true);
 
       currentUser = null;
@@ -998,10 +1012,10 @@
     clearAuthAreaMsgs();
 
     try{
-      const [r1, r2] = await Promise.all([
+      const [r1, r2] = await withTimeout(Promise.all([
         supabase.from("progress").delete().eq("user_id", currentUser.id),
         supabase.from("quiz_attempts").delete().eq("user_id", currentUser.id)
-      ]);
+      ]), 15000, "reset progress and attempts");
 
       const errs = [r1.error?.message, r2.error?.message].filter(Boolean);
       if(errs.length) return setUserMsg("No se pudo reiniciar: " + errs.join(" | "), true);
